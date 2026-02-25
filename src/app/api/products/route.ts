@@ -1,0 +1,137 @@
+import { NextRequest } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { withAuth, ok, err } from '@/lib/api'
+import { z } from 'zod'
+
+// Category code → SKU prefix mapping
+const SKU_PREFIX: Record<string, string> = {
+    BEER: 'B',
+    BEER_DRAFT: 'BD',
+    WINE: 'W',
+    COCKTAIL: 'CK',
+    DRINK: 'D',
+    WATER: 'WI',
+    FOOD_GRILL: 'FG',
+    FOOD_FRY: 'FF',
+    FOOD_RICE: 'FR',
+    FOOD_NOODLE: 'FN',
+    FOOD_SEA: 'FS',
+    FOOD_VEG: 'FV',
+    FOOD_LAAB: 'FL',
+    KARAOKE: 'KR',
+    SET: 'ST',
+    ENTERTAIN: 'EN',
+    RAW_MEAT: 'RM',
+    RAW_PORK: 'RP',
+    RAW_SEA: 'RS',
+    RAW_VEG: 'RV',
+    DRY_GOODS: 'DG',
+    PACKAGING: 'PK',
+    OTHER: 'OT',
+}
+
+async function generateSKU(categoryCode: string): Promise<string> {
+    const prefix = SKU_PREFIX[categoryCode] || 'XX'
+
+    // Find the highest existing SKU with this exact prefix + digits pattern
+    const existing = await prisma.product.findMany({
+        where: { sku: { startsWith: prefix } },
+        select: { sku: true },
+        orderBy: { sku: 'desc' },
+    })
+
+    let nextNum = 1
+    // Filter to exact prefix matches (e.g. B001 but NOT BD001)
+    const exactMatches = existing.filter(p => {
+        const rest = p.sku.slice(prefix.length)
+        return /^\d+$/.test(rest)
+    })
+
+    if (exactMatches.length > 0) {
+        // Sort numerically to find highest
+        const maxNum = Math.max(...exactMatches.map(p => parseInt(p.sku.slice(prefix.length)) || 0))
+        nextNum = maxNum + 1
+    }
+
+    return `${prefix}${String(nextNum).padStart(2, '0')}`
+}
+
+const productSchema = z.object({
+    sku: z.string().optional(),
+    name: z.string().min(1, 'กรุณากรอกชื่อสินค้า'),
+    nameTh: z.string().optional(),
+    nameLao: z.string().optional(),
+    categoryId: z.string().min(1, 'กรุณาเลือกหมวดหมู่'),
+    productType: z.enum(['SALE_ITEM', 'RAW_MATERIAL', 'PACKAGING', 'ENTERTAIN']).default('SALE_ITEM'),
+    unit: z.string().min(1, 'กรุณากรอกหน่วยหลัก'),
+    unitAlt: z.string().optional(),
+    convFactor: z.number().optional(),
+    costPrice: z.number().default(0),
+    salePrice: z.number().default(0),
+    reorderPoint: z.number().default(0),
+    minQty: z.number().default(0),
+    note: z.string().optional(),
+})
+
+// GET /api/products — รายการสินค้า
+export const GET = withAuth<any>(async (req: NextRequest, context: any) => {
+    const url = new URL(req.url)
+    const search = url.searchParams.get('search') || ''
+    const categoryId = url.searchParams.get('categoryId')
+    const productType = url.searchParams.get('productType')
+    const page = parseInt(url.searchParams.get('page') || '1')
+    const limit = parseInt(url.searchParams.get('limit') || '50')
+    const skip = (page - 1) * limit
+
+    const where: Record<string, unknown> = { isActive: true }
+    if (search) {
+        where.OR = [
+            { name: { contains: search } },
+            { sku: { contains: search } },
+            { nameTh: { contains: search } },
+        ]
+    }
+    if (categoryId) where.categoryId = categoryId
+    if (productType) where.productType = productType
+
+    const [products, total] = await Promise.all([
+        prisma.product.findMany({
+            where,
+            include: { category: true, inventory: { include: { location: true } } },
+            orderBy: { name: 'asc' },
+            skip,
+            take: limit,
+        }),
+        prisma.product.count({ where }),
+    ])
+
+    return ok({ products, total, page, limit, pages: Math.ceil(total / limit) })
+})
+
+// POST /api/products — สร้างสินค้าใหม่
+export const POST = withAuth<any>(async (req: NextRequest, context: any) => {
+    try {
+        const body = await req.json()
+        const data = productSchema.parse(body)
+
+        // Auto-generate SKU from category
+        const category = await prisma.category.findUnique({ where: { id: data.categoryId } })
+        if (!category) return err('ไม่พบหมวดหมู่ที่เลือก')
+
+        const sku = data.sku?.trim() || await generateSKU(category.code)
+
+        // Check duplicate SKU
+        const dupSku = await prisma.product.findFirst({ where: { sku } })
+        if (dupSku) return err(`SKU "${sku}" ซ้ำกับสินค้า "${dupSku.name}"`)
+
+        const product = await prisma.product.create({
+            data: { ...data, sku },
+            include: { category: true },
+        })
+        return ok(product)
+    } catch (error) {
+        if (error instanceof z.ZodError) return err(error.errors.map(e => e.message).join(', '))
+        console.error('Create product error:', error)
+        return err('เกิดข้อผิดพลาด')
+    }
+}, ['OWNER', 'MANAGER'])

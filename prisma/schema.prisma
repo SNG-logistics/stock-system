@@ -1,0 +1,496 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String            @id @default(cuid())
+  username          String            @unique
+  passwordHash      String
+  name              String
+  role              Role              @default(VIEWER)
+  isActive          Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  itemStatusChanges OrderItem[]       @relation("ItemStatusChangedBy")
+  orders            Order[]
+  purchaseOrders    PurchaseOrder[]
+  adjustments       StockAdjustment[]
+  stockMovements    StockMovement[]
+  transfers         StockTransfer[]
+
+  @@map("users")
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  code     String    @unique
+  name     String
+  nameEn   String?
+  color    String?
+  icon     String?
+  isActive Boolean   @default(true)
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id             String          @id @default(cuid())
+  sku            String          @unique
+  name           String
+  nameTh         String?
+  nameLao        String?
+  categoryId     String
+  productType    ProductType     @default(SALE_ITEM)
+  unit           String
+  unitAlt        String?
+  convFactor     Float?
+  costPrice      Float           @default(0)
+  salePrice      Float           @default(0)
+  reorderPoint   Float           @default(0)
+  minQty         Float           @default(0)
+  isActive       Boolean         @default(true)
+  note           String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  imageUrl       String?
+  inventory      Inventory[]
+  orderItems     OrderItem[]
+  category       Category        @relation(fields: [categoryId], references: [id])
+  purchaseItems  PurchaseItem[]
+  recipes        RecipeBOM[]     @relation("RecipeProduct")
+  bom            RecipeBOM[]
+  stockMovements StockMovement[]
+
+  @@index([categoryId], map: "products_categoryId_fkey")
+  @@map("products")
+}
+
+model Location {
+  id            String          @id @default(cuid())
+  code          String          @unique
+  name          String
+  nameLao       String?
+  type          LocationType
+  sortOrder     Int             @default(0)
+  isActive      Boolean         @default(true)
+  inventory     Inventory[]
+  fromMovements StockMovement[] @relation("FromLocation")
+  toMovements   StockMovement[] @relation("ToLocation")
+  transferFrom  StockTransfer[] @relation("TransferFrom")
+  transferTo    StockTransfer[] @relation("TransferTo")
+
+  @@map("locations")
+}
+
+model Inventory {
+  id          String   @id @default(cuid())
+  productId   String
+  locationId  String
+  quantity    Float    @default(0)
+  reservedQty Float    @default(0)
+  avgCost     Float    @default(0)
+  updatedAt   DateTime @updatedAt
+  location    Location @relation(fields: [locationId], references: [id])
+  product     Product  @relation(fields: [productId], references: [id])
+
+  @@unique([productId, locationId])
+  @@index([locationId], map: "inventory_locationId_fkey")
+  @@map("inventory")
+}
+
+model StockMovement {
+  id             String       @id @default(cuid())
+  productId      String
+  fromLocationId String?
+  toLocationId   String?
+  quantity       Float
+  unitCost       Float        @default(0)
+  totalCost      Float        @default(0)
+  type           MovementType
+  referenceId    String?
+  referenceType  String?
+  note           String?
+  createdById    String?
+  createdAt      DateTime     @default(now())
+  createdBy      User?        @relation(fields: [createdById], references: [id])
+  fromLocation   Location?    @relation("FromLocation", fields: [fromLocationId], references: [id])
+  product        Product      @relation(fields: [productId], references: [id])
+  toLocation     Location?    @relation("ToLocation", fields: [toLocationId], references: [id])
+
+  @@index([productId])
+  @@index([createdAt])
+  @@index([type])
+  @@index([createdById], map: "stock_movements_createdById_fkey")
+  @@index([fromLocationId], map: "stock_movements_fromLocationId_fkey")
+  @@index([toLocationId], map: "stock_movements_toLocationId_fkey")
+  @@map("stock_movements")
+}
+
+model PurchaseOrder {
+  id           String         @id @default(cuid())
+  poNumber     String         @unique
+  supplierId   String?
+  status       POStatus       @default(DRAFT)
+  totalAmount  Float          @default(0)
+  note         String?
+  billImageUrl String?
+  purchaseDate DateTime       @default(now())
+  createdById  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  items        PurchaseItem[]
+  createdBy    User?          @relation(fields: [createdById], references: [id])
+  supplier     Supplier?      @relation(fields: [supplierId], references: [id])
+
+  @@index([createdById], map: "purchase_orders_createdById_fkey")
+  @@index([supplierId], map: "purchase_orders_supplierId_fkey")
+  @@map("purchase_orders")
+}
+
+model PurchaseItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  locationId      String
+  quantity        Float
+  unitCost        Float
+  totalCost       Float
+  product         Product       @relation(fields: [productId], references: [id])
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+
+  @@index([productId], map: "purchase_items_productId_fkey")
+  @@index([purchaseOrderId], map: "purchase_items_purchaseOrderId_fkey")
+  @@map("purchase_items")
+}
+
+model Supplier {
+  id       String          @id @default(cuid())
+  name     String
+  phone    String?
+  note     String?
+  isActive Boolean         @default(true)
+  orders   PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+model StockTransfer {
+  id             String         @id @default(cuid())
+  fromLocationId String
+  toLocationId   String
+  status         TransferStatus @default(PENDING)
+  note           String?
+  requestedById  String?
+  transferDate   DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  fromLocation   Location       @relation("TransferFrom", fields: [fromLocationId], references: [id])
+  requestedBy    User?          @relation(fields: [requestedById], references: [id])
+  toLocation     Location       @relation("TransferTo", fields: [toLocationId], references: [id])
+  items          TransferItem[]
+
+  @@index([fromLocationId], map: "stock_transfers_fromLocationId_fkey")
+  @@index([requestedById], map: "stock_transfers_requestedById_fkey")
+  @@index([toLocationId], map: "stock_transfers_toLocationId_fkey")
+  @@map("stock_transfers")
+}
+
+model TransferItem {
+  id         String        @id @default(cuid())
+  transferId String
+  productId  String
+  quantity   Float
+  transfer   StockTransfer @relation(fields: [transferId], references: [id])
+
+  @@index([transferId], map: "transfer_items_transferId_fkey")
+  @@map("transfer_items")
+}
+
+model StockAdjustment {
+  id           String           @id @default(cuid())
+  locationId   String
+  status       AdjustmentStatus @default(PENDING)
+  reason       String
+  note         String?
+  adjustedById String?
+  adjustedAt   DateTime         @default(now())
+  createdAt    DateTime         @default(now())
+  items        AdjustmentItem[]
+  adjustedBy   User?            @relation(fields: [adjustedById], references: [id])
+
+  @@index([adjustedById], map: "stock_adjustments_adjustedById_fkey")
+  @@map("stock_adjustments")
+}
+
+model AdjustmentItem {
+  id           String          @id @default(cuid())
+  adjustmentId String
+  productId    String
+  locationId   String
+  systemQty    Float
+  actualQty    Float
+  diffQty      Float
+  unitCost     Float           @default(0)
+  adjustment   StockAdjustment @relation(fields: [adjustmentId], references: [id])
+
+  @@index([adjustmentId], map: "adjustment_items_adjustmentId_fkey")
+  @@map("adjustment_items")
+}
+
+model Recipe {
+  id          String      @id @default(cuid())
+  menuName    String
+  posMenuCode String?
+  isActive    Boolean     @default(true)
+  note        String?
+  bom         RecipeBOM[]
+
+  @@map("recipes")
+}
+
+model RecipeBOM {
+  id         String   @id @default(cuid())
+  recipeId   String
+  productId  String
+  menuId     String?
+  locationId String
+  quantity   Float
+  unit       String
+  menu       Product? @relation("RecipeProduct", fields: [menuId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+  recipe     Recipe   @relation(fields: [recipeId], references: [id])
+
+  @@index([menuId], map: "recipe_bom_menuId_fkey")
+  @@index([productId], map: "recipe_bom_productId_fkey")
+  @@index([recipeId], map: "recipe_bom_recipeId_fkey")
+  @@map("recipe_bom")
+}
+
+model SalesImport {
+  id           String            @id @default(cuid())
+  fileName     String
+  importDate   DateTime
+  saleDate     DateTime
+  status       SalesImportStatus @default(PENDING)
+  totalAmount  Float             @default(0)
+  totalItems   Int               @default(0)
+  note         String?
+  importedById String?
+  importedAt   DateTime          @default(now())
+  items        SalesImportItem[]
+
+  @@map("sales_imports")
+}
+
+model SalesImportItem {
+  id            String      @id @default(cuid())
+  importId      String
+  rowNumber     Int
+  menuName      String
+  unitPrice     Float
+  quantity      Float
+  totalAmount   Float
+  category      String?
+  stockDeducted Boolean     @default(false)
+  matchedRecipe String?
+  import        SalesImport @relation(fields: [importId], references: [id])
+
+  @@index([importId], map: "sales_import_items_importId_fkey")
+  @@map("sales_import_items")
+}
+
+model DiningTable {
+  id       String      @id @default(cuid())
+  number   Int         @unique
+  name     String
+  zone     String
+  seats    Int         @default(4)
+  status   TableStatus @default(AVAILABLE)
+  isActive Boolean     @default(true)
+  orders   Order[]
+
+  @@map("dining_tables")
+}
+
+model Order {
+  id            String       @id @default(cuid())
+  orderNumber   String       @unique
+  tableId       String?
+  status        OrderStatus  @default(OPEN)
+  subtotal      Float        @default(0)
+  discount      Float        @default(0)
+  discountType  DiscountType @default(AMOUNT)
+  serviceCharge Float        @default(0)
+  vat           Float        @default(0)
+  totalAmount   Float        @default(0)
+  note          String?
+  createdById   String?
+  openedAt      DateTime     @default(now())
+  closedAt      DateTime?
+  items         OrderItem[]
+  createdBy     User?        @relation(fields: [createdById], references: [id])
+  table         DiningTable? @relation(fields: [tableId], references: [id])
+  payments      Payment[]
+  salesEvents   SalesEvent[]
+
+  @@index([status])
+  @@index([openedAt])
+  @@index([createdById], map: "orders_createdById_fkey")
+  @@index([tableId], map: "orders_tableId_fkey")
+  @@map("orders")
+}
+
+model OrderItem {
+  id                String        @id @default(cuid())
+  orderId           String
+  productId         String
+  quantity          Float         @default(1)
+  unitPrice         Float         @default(0)
+  note              String?
+  isCancelled       Boolean       @default(false)
+  cancelReason      String?
+  kitchenStatus     KitchenStatus @default(PENDING)
+  stationId         String?
+  statusChangedAt   DateTime?
+  statusChangedById String?
+  order             Order         @relation(fields: [orderId], references: [id])
+  product           Product       @relation(fields: [productId], references: [id])
+  statusChangedBy   User?         @relation("ItemStatusChangedBy", fields: [statusChangedById], references: [id])
+
+  @@index([orderId], map: "order_items_orderId_fkey")
+  @@index([productId], map: "order_items_productId_fkey")
+  @@index([statusChangedById], map: "order_items_statusChangedById_fkey")
+  @@map("order_items")
+}
+
+model SalesEvent {
+  id         String   @id @default(cuid())
+  orderId    String
+  occurredAt DateTime @default(now())
+  payload    Json
+  processed  Boolean  @default(false)
+  order      Order    @relation(fields: [orderId], references: [id])
+
+  @@index([occurredAt])
+  @@index([processed])
+  @@index([orderId], map: "sales_events_orderId_fkey")
+  @@map("sales_events")
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  orderId        String
+  method         PaymentMethod @default(CASH)
+  amount         Float         @default(0)
+  receivedAmount Float         @default(0)
+  changeAmount   Float         @default(0)
+  reference      String?
+  paidAt         DateTime      @default(now())
+  order          Order         @relation(fields: [orderId], references: [id])
+
+  @@index([orderId], map: "payments_orderId_fkey")
+  @@map("payments")
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  PURCHASER
+  WAREHOUSE
+  KITCHEN
+  BAR
+  CASHIER
+  VIEWER
+}
+
+enum ProductType {
+  SALE_ITEM
+  RAW_MATERIAL
+  PACKAGING
+  ENTERTAIN
+}
+
+enum LocationType {
+  MAIN_WAREHOUSE
+  FRESH_STORAGE
+  DRINK_WAREHOUSE
+  DISPLAY_FREEZER
+  KITCHEN_STOCK
+  BAR_STOCK
+}
+
+enum MovementType {
+  PURCHASE
+  TRANSFER
+  SALE
+  ADJUSTMENT
+  WASTE
+  OPENING
+  RETURN
+}
+
+enum POStatus {
+  DRAFT
+  CONFIRMED
+  RECEIVED
+  CANCELLED
+}
+
+enum TransferStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  CANCELLED
+}
+
+enum AdjustmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SalesImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+}
+
+enum OrderStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+  VOID
+}
+
+enum DiscountType {
+  PERCENT
+  AMOUNT
+}
+
+enum KitchenStatus {
+  PENDING
+  ACCEPTED
+  COOKING
+  READY
+  SERVED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  CARD
+  QRCODE
+}

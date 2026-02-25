@@ -1,0 +1,60 @@
+import { NextRequest } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { withAuth, ok, err } from '@/lib/api'
+import { z } from 'zod'
+
+const cancelSchema = z.object({
+    reason: z.string().min(1, 'กรุณาระบุเหตุผลการยกเลิก'),
+})
+
+// POST /api/kitchen/items/[itemId]/cancel — Manager/Owner cancels item
+export const POST = withAuth(async (req: NextRequest, ctx) => {
+    const itemId = ctx.params?.itemId
+    if (!itemId) return err('Missing itemId')
+
+    try {
+        const body = await req.json()
+        const { reason } = cancelSchema.parse(body)
+
+        const item = await prisma.orderItem.findUnique({
+            where: { id: itemId },
+            include: { order: true, product: true },
+        })
+
+        if (!item) return err('ไม่พบรายการ', 404)
+        if (item.isCancelled) return err('รายการนี้ถูกยกเลิกแล้ว')
+        if (item.kitchenStatus === 'SERVED') return err('รายการเสิร์ฟแล้ว ไม่สามารถยกเลิกได้')
+
+        const updated = await prisma.orderItem.update({
+            where: { id: itemId },
+            data: {
+                kitchenStatus: 'CANCELLED',
+                isCancelled: true,
+                cancelReason: reason,
+                statusChangedAt: new Date(),
+                statusChangedById: ctx.user?.userId || null,
+            },
+            include: {
+                product: { select: { name: true, sku: true } },
+                statusChangedBy: { select: { name: true } },
+            },
+        })
+
+        // Recalculate order totals
+        const activeItems = await prisma.orderItem.findMany({
+            where: { orderId: item.orderId, isCancelled: false },
+        })
+        const subtotal = activeItems.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0)
+
+        await prisma.order.update({
+            where: { id: item.orderId },
+            data: { subtotal, totalAmount: subtotal },
+        })
+
+        return ok({ item: updated, reason, cancelledBy: ctx.user?.username })
+    } catch (error) {
+        if (error instanceof z.ZodError) return err(error.errors[0].message)
+        console.error('Cancel item error:', error)
+        return err('เกิดข้อผิดพลาด')
+    }
+}, ['OWNER', 'MANAGER'])
