@@ -4,14 +4,13 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient({
     datasources: {
         db: {
-            // เพิ่ม connection_limit=1 และ pool_timeout เพื่อแก้ปัญหาถูกตัดการเชื่อมต่อ (Server has closed the connection)
-            url: "mysql://root:UoaxjOEXQdJmYkZqEtslIdEwWvCgXnQk@viaduct.proxy.rlwy.net:19507/railway?connection_limit=1&connect_timeout=30"
+            url: "mysql://root:OXOzVHxHElHfhrAMzTgOSvdCNosIYAdw@shuttle.proxy.rlwy.net:57623/railway?connection_limit=1&connect_timeout=30"
         }
     }
 });
 
 async function main() {
-    console.log("Connecting to Railway DB with connection_limit=1...");
+    console.log("Connecting to the new Railway DB...");
     try {
         const ownerHash = bcrypt.hashSync('owner1234', 12);
         const staffHash = bcrypt.hashSync('staff1234', 12);
@@ -38,7 +37,7 @@ async function main() {
             create: { username: 'manager', name: 'ผู้จัดการ', passwordHash: managerHash, role: 'MANAGER', isActive: true }
         });
 
-        console.log("✅ อัปเดตรหัสผ่านและผู้ใช้งานบน Railway สำเร็จแล้ว! คุณสามารถเข้าสู่ระบบด้วยรหัสใหม่ได้เลย");
+        console.log("✅ อัปเดตรหัสผ่านสำเร็จ! เข้าสู่ระบบด้วยรหัสใหม่ได้เลยครับ!");
     } catch (err) {
         console.error("Error encountered:", err.message);
     }
