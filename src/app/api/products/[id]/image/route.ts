@@ -5,7 +5,8 @@ import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 
 // POST /api/products/[id]/image — upload product image
-export const POST = withAuth(async (req: NextRequest, { params }) => {
+export const POST = withAuth(async (req: NextRequest, ctx) => {
+    const params = await ctx.params
     const id = params?.id
     if (!id) return err('Missing product id')
 
@@ -31,9 +32,9 @@ export const POST = withAuth(async (req: NextRequest, { params }) => {
         const ext = file.type.split('/')[1].replace('jpeg', 'jpg')
         const filename = `${id}.${ext}`
         const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products')
-        
+
         await mkdir(uploadDir, { recursive: true })
-        
+
         const buffer = Buffer.from(await file.arrayBuffer())
         await writeFile(path.join(uploadDir, filename), buffer)
 

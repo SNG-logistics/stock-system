@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { withAuth, ok, err } from '@/lib/api'
 
 // GET /api/products/[id]
-export const GET = withAuth(async (req: NextRequest, { params }) => {
+export const GET = withAuth(async (req: NextRequest, ctx) => {
+    const params = await ctx.params
     const product = await prisma.product.findUnique({
         where: { id: params?.id },
         include: {
@@ -17,8 +18,9 @@ export const GET = withAuth(async (req: NextRequest, { params }) => {
 })
 
 // PATCH /api/products/[id]
-export const PATCH = withAuth(async (req: NextRequest, { params }) => {
+export const PATCH = withAuth(async (req: NextRequest, ctx) => {
     try {
+        const params = await ctx.params
         const body = await req.json()
         const product = await prisma.product.update({
             where: { id: params?.id },
@@ -32,7 +34,8 @@ export const PATCH = withAuth(async (req: NextRequest, { params }) => {
 }, ['OWNER', 'MANAGER', 'WAREHOUSE'])
 
 // DELETE /api/products/[id] (soft delete)
-export const DELETE = withAuth(async (req: NextRequest, { params }) => {
+export const DELETE = withAuth(async (req: NextRequest, ctx) => {
+    const params = await ctx.params
     await prisma.product.update({
         where: { id: params?.id },
         data: { isActive: false },

@@ -19,7 +19,8 @@ const updateOrderSchema = z.object({
 
 // GET /api/pos/orders/[id] — get single order
 export const GET = withAuth(async (_req: NextRequest, ctx) => {
-    const id = ctx.params?.id
+    const params = await ctx.params
+    const id = params?.id
     if (!id) return err('Missing order id')
 
     const order = await prisma.order.findUnique({
@@ -39,7 +40,8 @@ export const GET = withAuth(async (_req: NextRequest, ctx) => {
 
 // PUT /api/pos/orders/[id] — add items / update order
 export const PUT = withAuth(async (req: NextRequest, ctx) => {
-    const id = ctx.params?.id
+    const params = await ctx.params
+    const id = params?.id
     if (!id) return err('Missing order id')
 
     try {

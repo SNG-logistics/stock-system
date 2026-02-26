@@ -15,7 +15,8 @@ const closeOrderSchema = z.object({
 
 // POST /api/pos/orders/[id]/close — close bill & deduct stock
 export const POST = withAuth(async (req: NextRequest, ctx) => {
-    const id = ctx.params?.id
+    const params = await ctx.params
+    const id = params?.id
     if (!id) return err('Missing order id')
 
     try {
@@ -68,7 +69,7 @@ export const POST = withAuth(async (req: NextRequest, ctx) => {
 
         for (const item of order.items) {
             if (item.product.productType === 'ENTERTAIN') continue // skip entertain items
-            
+
             // Find recipe for this product
             const recipes = await prisma.recipeBOM.findMany({
                 where: { menuId: item.productId },

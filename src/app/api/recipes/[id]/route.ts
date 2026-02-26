@@ -16,8 +16,9 @@ const recipeSchema = z.object({
 })
 
 // PUT /api/recipes/[id] — แก้ไขสูตร (ลบ BOM เก่าทั้งหมดแล้วสร้างใหม่)
-export const PUT = withAuth(async (req: NextRequest, { params }) => {
+export const PUT = withAuth(async (req: NextRequest, ctx) => {
     try {
+        const params = await ctx.params
         const id = params?.id
         if (!id) return err('ไม่พบ ID')
         const body = await req.json()
@@ -56,8 +57,9 @@ export const PUT = withAuth(async (req: NextRequest, { params }) => {
 }, ['OWNER', 'MANAGER'])
 
 // DELETE /api/recipes/[id] — ลบสูตร (soft delete)
-export const DELETE = withAuth(async (_req: NextRequest, { params }) => {
+export const DELETE = withAuth(async (_req: NextRequest, ctx) => {
     try {
+        const params = await ctx.params
         const id = params?.id
         if (!id) return err('ไม่พบ ID')
 

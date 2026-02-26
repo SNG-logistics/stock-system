@@ -9,7 +9,8 @@ const statusSchema = z.object({
 
 // PATCH /api/kitchen/items/[itemId]/status — Kitchen updates item status
 export const PATCH = withAuth(async (req: NextRequest, ctx) => {
-    const itemId = ctx.params?.itemId
+    const params = await ctx.params
+    const itemId = params?.itemId
     if (!itemId) return err('Missing itemId')
 
     try {

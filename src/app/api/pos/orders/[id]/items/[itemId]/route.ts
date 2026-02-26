@@ -4,8 +4,9 @@ import { withAuth, ok, err } from '@/lib/api'
 
 // DELETE /api/pos/orders/[id]/items/[itemId] — cancel an item
 export const DELETE = withAuth(async (_req: NextRequest, ctx) => {
-    const orderId = ctx.params?.id
-    const itemId = ctx.params?.itemId
+    const params = await ctx.params
+    const orderId = params?.id
+    const itemId = params?.itemId
     if (!orderId || !itemId) return err('Missing ids')
 
     try {
