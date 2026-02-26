@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { formatLAK, formatLAKShort } from '@/lib/utils'
 import { format } from 'date-fns'
-import th from 'date-fns/locale/th'
+import { th } from 'date-fns/locale/th'
 import Link from 'next/link'
 
 interface RecentOrder {
