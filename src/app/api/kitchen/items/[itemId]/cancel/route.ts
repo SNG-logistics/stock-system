@@ -9,7 +9,8 @@ const cancelSchema = z.object({
 
 // POST /api/kitchen/items/[itemId]/cancel — Manager/Owner cancels item
 export const POST = withAuth(async (req: NextRequest, ctx) => {
-    const itemId = ctx.params?.itemId
+    const params = await ctx.params
+    const itemId = params?.itemId
     if (!itemId) return err('Missing itemId')
 
     try {
