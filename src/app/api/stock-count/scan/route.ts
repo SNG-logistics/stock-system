@@ -58,6 +58,12 @@ Return ONLY a valid JSON array: [{"name": "product name", "qty": number, "unit":
         const aiJson = await aiRes.json()
         const rawText = aiJson.choices?.[0]?.message?.content || ''
 
+        // Log token usage
+        console.log(`\n\x1b[36m📊 [AI Stock Count] Token Usage:\x1b[0m`)
+        console.log(`Prompt Tokens: ${aiJson.usage?.prompt_tokens || 0}`)
+        console.log(`Completion Tokens: ${aiJson.usage?.completion_tokens || 0}`)
+        console.log(`Total Tokens: ${aiJson.usage?.total_tokens || 0}\n`)
+
         // ── Parse JSON from AI response ─────────────────────────
         let extracted: { name: string; qty: number; unit: string }[] = []
         try {

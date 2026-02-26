@@ -4,7 +4,8 @@ import { verifyToken } from '@/lib/auth'
 import { MovementType } from '@prisma/client'
 
 // PATCH /api/inventory/[id]  — แก้ไข quantity และ/หรือ avgCost
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const token = req.cookies.get('token')?.value
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const user = verifyToken(token)
@@ -20,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
         // Fetch current record for movement log
         const current = await prisma.inventory.findUnique({
-            where: { id: params.id },
+            where: { id: id },
             include: { product: true, location: true },
         })
         if (!current) return NextResponse.json({ error: 'ไม่พบ inventory record' }, { status: 404 })
@@ -30,7 +31,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
         // Update inventory
         const updated = await prisma.inventory.update({
-            where: { id: params.id },
+            where: { id: id },
             data: {
                 quantity: newQty,
                 avgCost: newCost,

@@ -87,6 +87,12 @@ Rules:
         const aiRes = await response.json()
         const content = aiRes.choices?.[0]?.message?.content || ''
 
+        // Log token usage
+        console.log(`\n\x1b[36m📊 [AI Bill Scan] Token Usage:\x1b[0m`)
+        console.log(`Prompt Tokens: ${aiRes.usage?.prompt_tokens || 0}`)
+        console.log(`Completion Tokens: ${aiRes.usage?.completion_tokens || 0}`)
+        console.log(`Total Tokens: ${aiRes.usage?.total_tokens || 0}\n`)
+
         // Parse JSON from response (clean up any markdown fences)
         const jsonStr = content
             .replace(/```json\n?/g, '')
