@@ -14,7 +14,7 @@ export type ApiHandler<T = any> = (
 
 /** Middleware: ตรวจ JWT token */
 export function withAuth<T>(handler: ApiHandler<T>, allowedRoles?: string[]) {
-  return async (req: NextRequest, context: { params?: Promise<Record<string, string>> }) => {
+  return async (req: NextRequest, context: any) => {
     const token = req.cookies.get('token')?.value ||
       req.headers.get('authorization')?.replace('Bearer ', '')
 
@@ -23,20 +23,20 @@ export function withAuth<T>(handler: ApiHandler<T>, allowedRoles?: string[]) {
     }
 
     try {
-        const user = verifyToken(token)
-        if (!user) {
-          return NextResponse.json({ error: 'Invalid token' }, { status: 401 }) as any
-        }
-
-        if (allowedRoles && !allowedRoles.includes(user.role)) {
-          return NextResponse.json({ error: 'Forbidden: insufficient role' }, { status: 403 }) as any
-        }
-        
-        // Pass user into context safely
-        const authContext: AuthContext = { ...context, user };
-        return handler(req, authContext);
-    } catch(err) {
+      const user = verifyToken(token)
+      if (!user) {
         return NextResponse.json({ error: 'Invalid token' }, { status: 401 }) as any
+      }
+
+      if (allowedRoles && !allowedRoles.includes(user.role)) {
+        return NextResponse.json({ error: 'Forbidden: insufficient role' }, { status: 403 }) as any
+      }
+
+      // Pass user into context safely
+      const authContext: AuthContext = { ...context, user };
+      return handler(req, authContext);
+    } catch (err) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 }) as any
     }
   }
 }
