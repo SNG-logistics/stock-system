@@ -14,7 +14,7 @@ interface QRPayload {
 }
 
 interface PageProps {
-    params: { token: string }
+    params: Promise<{ token: string }>
 }
 
 // Decode JWT payload without verifying (verification is done in API)
@@ -28,8 +28,9 @@ function decodeJWT(token: string): QRPayload | null {
     }
 }
 
+import { use } from 'react'
 export default function QRMobilePage({ params }: PageProps) {
-    const { token } = params
+    const { token } = use(params)
     const [qty, setQty] = useState('')
     const [loading, setLoading] = useState(false)
     const [done, setDone] = useState(false)
