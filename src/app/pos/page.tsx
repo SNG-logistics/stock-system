@@ -71,6 +71,7 @@ export default function POSPage() {
     const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'warning' } | null>(null)
     const [showReceiptPreview, setShowReceiptPreview] = useState(false)
     const [proteinPendingProduct, setProteinPendingProduct] = useState<Product | null>(null)
+    const [sentItems, setSentItems] = useState<{ kitchen: OrderItemData[], bar: OrderItemData[], orderId: string, tableCode: string } | null>(null)
     const [authChecked, setAuthChecked] = useState(false)
     const searchRef = useRef<HTMLInputElement>(null)
 
@@ -341,6 +342,31 @@ export default function POSPage() {
             return null
         } finally {
             setLoading(false)
+        }
+    }
+
+    const confirmAndSaveOrder = async () => {
+        if (!selectedTable || orderItems.length === 0) return;
+
+        const newItems = orderItems.filter(i => !i.id);
+
+        const orderId = await saveOrder();
+        if (orderId && newItems.length > 0) {
+            const kitchenList: OrderItemData[] = [];
+            const barList: OrderItemData[] = [];
+
+            newItems.forEach(item => {
+                const code = (item.product?.category?.code || '').toLowerCase();
+                const name = (item.product?.category?.name || '').toLowerCase();
+                const isDrink = code.includes('drink') || code.includes('bev') || name.includes('เครื่องดื่ม') || name.includes('น้ำ') || name.includes('เบียร์') || name.includes('เหล้า') || name.includes('แอลกอฮอล์');
+                if (isDrink) {
+                    barList.push(item);
+                } else {
+                    kitchenList.push(item);
+                }
+            });
+
+            setSentItems({ kitchen: kitchenList, bar: barList, orderId, tableCode: selectedTable.name });
         }
     }
 
@@ -1200,7 +1226,7 @@ export default function POSPage() {
                         >
                             ❌ ยกเลิก
                         </button>
-                        <button onClick={saveOrder} disabled={orderItems.length === 0 || loading}
+                        <button onClick={confirmAndSaveOrder} disabled={orderItems.length === 0 || loading}
                             style={{
                                 flex: 1, padding: '0.65rem', borderRadius: 10, border: 'none',
                                 background: '#2563EB', color: '#fff', cursor: 'pointer',
@@ -1210,7 +1236,7 @@ export default function POSPage() {
                                 transition: 'all 0.15s ease',
                             }}
                         >
-                            💾 บันทึก
+                            ✅ ยืนยัน
                         </button>
                         <button onClick={closeBill} disabled={orderItems.length === 0}
                             style={{
@@ -1391,6 +1417,106 @@ export default function POSPage() {
                                 }}
                             >
                                 💳 ไปชำระเงิน →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ════ SEND TO KITCHEN / BAR MODAL ════ */}
+            {sentItems && (
+                <div style={{
+                    position: 'fixed', inset: 0,
+                    background: 'rgba(0,0,0,0.5)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 100,
+                    backdropFilter: 'blur(8px)',
+                    padding: '0.75rem',
+                }}>
+                    <div style={{
+                        background: '#FFFFFF',
+                        borderRadius: 16,
+                        width: '100%',
+                        maxWidth: 400,
+                        maxHeight: '92vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        boxShadow: '0 24px 48px rgba(0,0,0,0.2)',
+                        overflow: 'hidden',
+                    }}>
+                        {/* Header */}
+                        <div style={{
+                            padding: '1.25rem',
+                            borderBottom: '1px solid #E5E7EB',
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            flexShrink: 0,
+                        }}>
+                            <div>
+                                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1A1D26' }}>✅ ส่งออเดอร์สำเร็จ</div>
+                                <div style={{ fontSize: '0.8rem', color: '#9CA3AF', marginTop: 4 }}>โต๊ะ: {sentItems.tableCode}</div>
+                            </div>
+                            <button onClick={() => setSentItems(null)}
+                                style={{
+                                    background: '#F3F4F6', border: 'none', color: '#6B7280',
+                                    cursor: 'pointer', borderRadius: 8,
+                                    minWidth: 36, minHeight: 36,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem',
+                                }}
+                            >✕</button>
+                        </div>
+
+                        {/* lists */}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
+                            <div style={{ marginBottom: 16 }}>
+                                <div style={{ fontWeight: 700, color: '#1A1D26', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                                    <span style={{ fontSize: '1.2rem' }}>👩‍🍳</span> ส่งครัว ({sentItems.kitchen.length} รายการ)
+                                </div>
+                                {sentItems.kitchen.length > 0 ? (
+                                    <div style={{ background: '#F8F9FC', borderRadius: 8, padding: '0.75rem', border: '1px solid #E5E7EB' }}>
+                                        {sentItems.kitchen.map((item, idx) => (
+                                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 6 }}>
+                                                <span>{item.quantity} × {item.product?.name}</span>
+                                                {item.note && <span style={{ color: '#E8364E', fontSize: '0.8rem', marginLeft: 4 }}>({item.note})</span>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div style={{ fontSize: '0.8rem', color: '#9CA3AF', padding: '0.5rem', textAlign: 'center' }}>ไม่มีรายการส่งครัว</div>
+                                )}
+                            </div>
+
+                            <div>
+                                <div style={{ fontWeight: 700, color: '#1A1D26', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                                    <span style={{ fontSize: '1.2rem' }}>🍹</span> ส่งบาร์ ({sentItems.bar.length} รายการ)
+                                </div>
+                                {sentItems.bar.length > 0 ? (
+                                    <div style={{ background: '#F8F9FC', borderRadius: 8, padding: '0.75rem', border: '1px solid #E5E7EB' }}>
+                                        {sentItems.bar.map((item, idx) => (
+                                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 6 }}>
+                                                <span>{item.quantity} × {item.product?.name}</span>
+                                                {item.note && <span style={{ color: '#E8364E', fontSize: '0.8rem', marginLeft: 4 }}>({item.note})</span>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div style={{ fontSize: '0.8rem', color: '#9CA3AF', padding: '0.5rem', textAlign: 'center' }}>ไม่มีรายการส่งบาร์</div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid #E5E7EB', background: '#FAFBFD' }}>
+                            <button onClick={() => setSentItems(null)}
+                                style={{
+                                    width: '100%', padding: '0.8rem', borderRadius: 10, border: 'none',
+                                    background: 'linear-gradient(135deg, #059669, #10B981)',
+                                    color: '#fff', cursor: 'pointer', fontSize: '0.95rem',
+                                    fontWeight: 700, fontFamily: 'inherit',
+                                    boxShadow: '0 4px 16px rgba(5,150,105,0.3)',
+                                    transition: 'all 0.15s ease',
+                                }}
+                            >
+                                ตกลง
                             </button>
                         </div>
                     </div>
