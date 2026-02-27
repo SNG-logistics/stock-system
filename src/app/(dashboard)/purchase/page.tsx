@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { formatLAK } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import StockSheetGridModal from '@/components/StockSheetGridModal'
 
 interface Product { id: string; sku: string; name: string; unit: string; costPrice: number }
 interface Location { id: string; code: string; name: string }
@@ -512,6 +513,7 @@ export default function PurchasePage() {
     const [orders, setOrders] = useState<unknown[]>([])
     const [showScanner, setShowScanner] = useState(false)
     const [showStockSheet, setShowStockSheet] = useState(false)
+    const [showStockGrid, setShowStockGrid] = useState(false)
 
     useEffect(() => {
         fetch('/api/products?limit=500').then(r => r.json()).then(j => j.success && setProducts(j.data.products))
@@ -618,6 +620,31 @@ export default function PurchasePage() {
         toast.success(`✅ นำเข้า ${newItems.length} รายการ (จับคู่ ${matched}/${newItems.length}${unmatched > 0 ? ` — เหลือ ${unmatched} รายการต้องเลือกสินค้า` : ''})`)
     }
 
+    function handleStockGridImport(gridItems: { name: string; unit: string; quantityIn: number; costPerUnit: number }[], date: string) {
+        const defLoc = locations.find(l => l.code === 'WH_MAIN') || locations[0]
+        if (!defLoc) return
+
+        const newItems: PurchaseItem[] = gridItems.map(gi => {
+            const matched = fuzzyMatchProduct(products, gi.name)
+            return {
+                productId: matched?.id || '',
+                productName: matched?.name || gi.name,
+                unit: matched?.unit || gi.unit,
+                locationId: defLoc.id,
+                quantity: gi.quantityIn,
+                unitCost: gi.costPerUnit,
+                searchText: matched ? undefined : gi.name,
+            }
+        })
+
+        const matchedCount = newItems.filter(i => i.productId).length
+        const unmatchedCount = newItems.length - matchedCount
+        setItems(prev => [...prev, ...newItems])
+        setPurchaseDate(date)
+        setShowStockGrid(false)
+        toast.success(`✅ นำเข้าใบสต็อค ${newItems.length} รายการ (จับคู่ ${matchedCount}/${newItems.length}${unmatchedCount > 0 ? ` — เหลือ ${unmatchedCount} เลือกสินค้า` : ''})`)
+    }
+
     const total = items.reduce((s, i) => s + i.quantity * i.unitCost, 0)
     const validItems = items.filter(i => i.productId)
     const defLocationId = (locations.find(l => l.code === 'WH_MAIN') || locations[0])?.id || ''
@@ -657,6 +684,13 @@ export default function PurchasePage() {
                 <StockSheetScannerModal
                     onClose={() => setShowStockSheet(false)}
                     onImport={handleStockSheetImport}
+                />
+            )}
+
+            {showStockGrid && (
+                <StockSheetGridModal
+                    onClose={() => setShowStockGrid(false)}
+                    onImport={handleStockGridImport}
                 />
             )}
 
@@ -729,7 +763,15 @@ export default function PurchasePage() {
                             📦 รายการสินค้า
                             {items.length > 0 && <span style={{ marginLeft: 8, color: 'var(--accent)', fontWeight: 800 }}>{items.length} รายการ</span>}
                         </h3>
-                        <div style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button onClick={() => setShowStockGrid(true)} style={{
+                                padding: '0.35rem 0.85rem', borderRadius: 8, fontFamily: 'inherit',
+                                fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
+                                border: 'none', background: 'linear-gradient(135deg,#059669,#10B981)',
+                                color: '#fff', display: 'flex', alignItems: 'center', gap: 4,
+                            }}>
+                                📋 กรอกใบสต็อค
+                            </button>
                             <button onClick={() => setShowScanner(true)} style={{
                                 padding: '0.35rem 0.85rem', borderRadius: 8, fontFamily: 'inherit',
                                 fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
