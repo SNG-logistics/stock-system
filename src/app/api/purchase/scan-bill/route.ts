@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { withAuth, ok, err } from '@/lib/api'
+import { getAiConfig } from '@/lib/ai-config'
 
 // POST /api/purchase/scan-bill
 // Body: { image: string (base64 data URL), mimeType?: string }
@@ -13,10 +14,7 @@ export const POST = withAuth(async (req: NextRequest) => {
     const base64 = image.includes(',') ? image.split(',')[1] : image
     const mimeType = image.startsWith('data:') ? image.split(';')[0].replace('data:', '') : 'image/jpeg'
 
-    const apiKey = process.env.COMET_API_KEY
-    const apiUrl = process.env.COMET_API_URL || 'https://api.cometapi.com/v1'
-    const model = process.env.COMET_MODEL || 'gpt-4o'
-
+    const { apiKey, apiUrl, model } = getAiConfig()
     if (!apiKey) return err('ไม่พบ COMET_API_KEY')
 
     const prompt = `You are an expert at reading purchase/invoice bills for a restaurant/food business.

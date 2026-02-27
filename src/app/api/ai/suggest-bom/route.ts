@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { withAuth, ok, err } from '@/lib/api'
 import { prisma } from '@/lib/prisma'
+import { getAiConfig } from '@/lib/ai-config'
 
 /**
  * POST /api/ai/suggest-bom
@@ -12,9 +13,7 @@ export const POST = withAuth(async (req: NextRequest) => {
     const { menuName, clarification, debug } = body as { menuName?: string; clarification?: string; debug?: boolean }
     if (!menuName) return err('กรุณาระบุชื่อเมนู')
 
-    const apiKey = process.env.COMET_API_KEY
-    const apiUrl = process.env.COMET_API_URL || 'https://api.cometapi.com/v1'
-    const model = process.env.COMET_MODEL || 'gpt-4o-mini'
+    const { apiKey, apiUrl, model } = getAiConfig()
     if (!apiKey) return err('ไม่พบ COMET_API_KEY ใน .env')
 
     const rawMaterials = await prisma.product.findMany({
