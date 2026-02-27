@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { withAuth, ok, err } from '@/lib/api'
 import { prisma } from '@/lib/prisma'
+import { getAiConfig } from '@/lib/ai-config'
 
 // POST /api/stock-count/scan — อ่านใบนับสต็อคด้วย AI
 export const POST = withAuth(async (req: NextRequest) => {
@@ -8,9 +9,7 @@ export const POST = withAuth(async (req: NextRequest) => {
         const { imageBase64 } = await req.json()
         if (!imageBase64) return err('ไม่พบรูปภาพ')
 
-        const apiKey = process.env.COMET_API_KEY || process.env.OPENROUTER_API_KEY
-        const apiUrl = process.env.COMET_API_URL || 'https://openrouter.ai/api/v1'
-        const model = process.env.COMET_MODEL || 'openai/gpt-4o'
+        const { apiKey, apiUrl, model } = getAiConfig()
 
         if (!apiKey) return err('ไม่ได้ตั้งค่า API key')
 
