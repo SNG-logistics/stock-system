@@ -8,6 +8,8 @@ interface Location { id: string; code: string; name: string }
 interface PurchaseItem { productId: string; productName: string; unit: string; locationId: string; quantity: number; unitCost: number }
 interface ScannedItem { name: string; quantity: number; unit: string; unitPrice: number; totalPrice: number }
 interface ScanResult { supplier: string | null; billDate: string | null; items: ScannedItem[]; totalAmount: number; notes: string | null }
+interface StockSheetItem { name: string; unit: string; quantityIn: number; costPerUnit: number; totalCost: number; remaining: number | null }
+interface StockSheetResult { sheetDate: string | null; items: StockSheetItem[] }
 
 // ---- Product Combobox ----
 function ProductCombobox({ products, value, onChange }: {
@@ -78,6 +80,187 @@ function ProductCombobox({ products, value, onChange }: {
     )
 }
 
+// ── Stock Sheet Scanner Modal ──────────────────────────────────────────────
+function StockSheetScannerModal({ onClose, onImport }: {
+    onClose: () => void
+    onImport: (result: { sheetDate: string | null; items: { name: string; unit: string; quantityIn: number; costPerUnit: number; totalCost: number; remaining: number | null }[] }) => void
+}) {
+    const [mode, setMode] = useState<'choose' | 'camera' | 'preview'>('choose')
+    const [imageData, setImageData] = useState<string | null>(null)
+    const [scanning, setScanning] = useState(false)
+    const [result, setResult] = useState<{ sheetDate: string | null; items: { name: string; unit: string; quantityIn: number; costPerUnit: number; totalCost: number; remaining: number | null }[] } | null>(null)
+    const videoRef = useRef<HTMLVideoElement>(null)
+    const streamRef = useRef<MediaStream | null>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const startCamera = useCallback(async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }
+            })
+            streamRef.current = stream
+            if (videoRef.current) videoRef.current.srcObject = stream
+            setMode('camera')
+        } catch { toast.error('ไม่สามารถเปิดกล้องได้') }
+    }, [])
+
+    const stopCamera = useCallback(() => {
+        streamRef.current?.getTracks().forEach(t => t.stop())
+        streamRef.current = null
+    }, [])
+
+    useEffect(() => () => stopCamera(), [stopCamera])
+
+    const capture = () => {
+        const video = videoRef.current; if (!video) return
+        const canvas = document.createElement('canvas')
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight
+        canvas.getContext('2d')?.drawImage(video, 0, 0)
+        setImageData(canvas.toDataURL('image/jpeg', 0.92))
+        stopCamera(); setMode('preview')
+    }
+
+    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]; if (!file) return
+        const reader = new FileReader()
+        reader.onload = ev => { setImageData(ev.target?.result as string); setMode('preview') }
+        reader.readAsDataURL(file)
+    }
+
+    const scan = async () => {
+        if (!imageData) return
+        setScanning(true)
+        try {
+            const res = await fetch('/api/ai/scan-stock-sheet', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            })
+            const json = await res.json()
+            if (json.success) setResult(json.data)
+            else toast.error(json.error || 'อ่านใบสต็อคไม่สำเร็จ')
+        } catch { toast.error('เกิดข้อผิดพลาด') }
+        finally { setScanning(false) }
+    }
+
+    const reset = () => { setImageData(null); setResult(null); setMode('choose'); stopCamera() }
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 500, padding: '0.75rem', backdropFilter: 'blur(6px)' }}>
+            <div style={{ background: 'var(--white)', borderRadius: 18, width: '100%', maxWidth: 560, maxHeight: '95vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}>
+                {/* Header */}
+                <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                    <div>
+                        <div style={{ fontWeight: 800, fontSize: '1rem' }}>📋 AI อ่านใบสต็อคของสด</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>ถ่ายรูปใบสต็อค — AI จะอ่านรายการรับเข้าให้อัตโนมัติ</div>
+                    </div>
+                    <button onClick={() => { stopCamera(); onClose() }} style={{ background: 'var(--bg)', border: 'none', borderRadius: 8, width: 36, height: 36, cursor: 'pointer', fontSize: '1rem', color: 'var(--text-muted)' }}>✕</button>
+                </div>
+
+                <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }}>
+                    {mode === 'choose' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                            {[
+                                { icon: '📷', label: 'ถ่ายรูปใบสต็อค', action: startCamera },
+                                { icon: '🖼️', label: 'อัปโหลดรูป', action: () => fileInputRef.current?.click() },
+                            ].map(b => (
+                                <button key={b.label} onClick={b.action} style={{ padding: '2.5rem 1rem', borderRadius: 14, border: '2px dashed var(--border)', background: 'var(--bg)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, transition: 'all 0.18s' }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#059669'; e.currentTarget.style.background = 'rgba(5,150,105,0.05)' }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg)' }}>
+                                    <span style={{ fontSize: '2.5rem' }}>{b.icon}</span>
+                                    <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{b.label}</span>
+                                </button>
+                            ))}
+                            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFileChange} />
+                        </div>
+                    )}
+
+                    {mode === 'camera' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', aspectRatio: '4/3' }}>
+                                <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <button onClick={reset} style={{ flex: 1, padding: '0.65rem', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--white)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>← กลับ</button>
+                                <button onClick={capture} style={{ flex: 2, padding: '0.65rem', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#059669,#10B981)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>📸 ถ่ายรูป</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {mode === 'preview' && !result && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {imageData && <img src={imageData} alt="stock sheet" style={{ width: '100%', maxHeight: 400, objectFit: 'contain', borderRadius: 12, border: '1px solid var(--border)' }} />}
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <button onClick={reset} style={{ flex: 1, padding: '0.65rem', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--white)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>🔄 ถ่ายใหม่</button>
+                                <button onClick={scan} disabled={scanning} style={{ flex: 2, padding: '0.65rem', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#059669,#10B981)', color: '#fff', fontWeight: 700, cursor: scanning ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: scanning ? 0.7 : 1 }}>
+                                    {scanning ? '⏳ AI กำลังอ่านใบสต็อค...' : '🤖 ให้ AI อ่านใบสต็อค'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {result && (
+                        <div>
+                            <div style={{ background: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.2)', borderRadius: 12, padding: '0.85rem 1rem', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <span style={{ fontSize: '1.5rem' }}>✅</span>
+                                <div>
+                                    <div style={{ fontWeight: 700, color: '#059669', fontSize: '0.88rem' }}>AI อ่านใบสต็อคสำเร็จ — พบ {result.items.length} รายการ</div>
+                                    {result.sheetDate && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>วันที่: {result.sheetDate}</div>}
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 80px 90px', gap: 6, padding: '0 4px', marginBottom: 2 }}>
+                                    {['ชื่อ', 'หน่วย', 'รับเข้า', 'ราคา/หน่วย'].map(h => (
+                                        <span key={h} style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
+                                    ))}
+                                </div>
+                                {result.items.map((item, i) => (
+                                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 80px 90px', gap: 6, alignItems: 'center', background: 'var(--bg)', borderRadius: 10, padding: '0.5rem 0.6rem', border: `1px solid ${item.quantityIn > 0 ? 'var(--border)' : 'rgba(239,68,68,0.2)'}` }}>
+                                        <div style={{ fontWeight: 600, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.name}>{item.name}</div>
+                                        <input
+                                            value={item.unit}
+                                            onChange={e => {
+                                                const updated = [...result.items]
+                                                updated[i] = { ...updated[i], unit: e.target.value }
+                                                setResult({ ...result, items: updated })
+                                            }}
+                                            style={{ fontSize: '0.78rem', padding: '3px 6px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--white)', fontFamily: 'inherit', width: '100%' }}
+                                        />
+                                        <input type="number" min={0} step={0.001}
+                                            value={item.quantityIn}
+                                            onChange={e => {
+                                                const updated = [...result.items]
+                                                updated[i] = { ...updated[i], quantityIn: parseFloat(e.target.value) || 0 }
+                                                setResult({ ...result, items: updated })
+                                            }}
+                                            style={{ fontSize: '0.82rem', padding: '3px 6px', border: `1px solid ${item.quantityIn > 0 ? 'var(--border)' : 'rgba(239,68,68,0.4)'}`, borderRadius: 6, background: 'var(--white)', fontFamily: 'inherit', textAlign: 'right', width: '100%', fontWeight: 700, color: item.quantityIn > 0 ? '#059669' : '#EF4444' }}
+                                        />
+                                        <input type="number" min={0} step={1}
+                                            value={item.costPerUnit}
+                                            onChange={e => {
+                                                const updated = [...result.items]
+                                                updated[i] = { ...updated[i], costPerUnit: parseFloat(e.target.value) || 0, totalCost: (parseFloat(e.target.value) || 0) * item.quantityIn }
+                                                setResult({ ...result, items: updated })
+                                            }}
+                                            style={{ fontSize: '0.78rem', padding: '3px 6px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--white)', fontFamily: 'inherit', textAlign: 'right', width: '100%' }}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <button onClick={reset} style={{ flex: 1, padding: '0.65rem', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--white)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>🔄 สแกนใหม่</button>
+                                <button onClick={() => onImport(result)} style={{ flex: 2, padding: '0.65rem', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#059669,#10B981)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(5,150,105,0.3)' }}>
+                                    ✅ นำเข้ารายการ ({result.items.filter(i => i.quantityIn > 0).length})
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    )
+}
 // ---- AI Bill Scanner Modal ----
 function BillScannerModal({
     onClose, onImport,
@@ -355,6 +538,7 @@ export default function PurchasePage() {
     const [tab, setTab] = useState<'new' | 'history'>('new')
     const [orders, setOrders] = useState<unknown[]>([])
     const [showScanner, setShowScanner] = useState(false)
+    const [showStockSheet, setShowStockSheet] = useState(false)
 
     useEffect(() => {
         fetch('/api/products?limit=500').then(r => r.json()).then(j => j.success && setProducts(j.data.products))
@@ -412,6 +596,33 @@ export default function PurchasePage() {
         toast.success(`✅ นำเข้า ${newItems.length} รายการจากบิล`)
     }
 
+    function handleStockSheetImport(result: StockSheetResult) {
+        const defLoc = locations.find(l => l.code === 'WH_MAIN') || locations[0]
+        if (!defLoc) return
+
+        const newItems: PurchaseItem[] = result.items
+            .filter(si => si.quantityIn > 0)
+            .map(si => {
+                const matched = products.find(p =>
+                    p.name.toLowerCase().includes(si.name.toLowerCase()) ||
+                    si.name.toLowerCase().includes(p.name.toLowerCase())
+                )
+                return {
+                    productId: matched?.id || '',
+                    productName: matched?.name || si.name,
+                    unit: matched?.unit || si.unit,
+                    locationId: defLoc.id,
+                    quantity: si.quantityIn,
+                    unitCost: si.costPerUnit,
+                }
+            })
+
+        setItems(prev => [...prev, ...newItems])
+        if (result.sheetDate) setPurchaseDate(result.sheetDate)
+        setShowStockSheet(false)
+        toast.success(`✅ นำเข้า ${newItems.length} รายการจากใบสต็อค`)
+    }
+
     const total = items.reduce((s, i) => s + i.quantity * i.unitCost, 0)
     const validItems = items.filter(i => i.productId)
     const defLocationId = (locations.find(l => l.code === 'WH_MAIN') || locations[0])?.id || ''
@@ -447,6 +658,13 @@ export default function PurchasePage() {
                 />
             )}
 
+            {showStockSheet && (
+                <StockSheetScannerModal
+                    onClose={() => setShowStockSheet(false)}
+                    onImport={handleStockSheetImport}
+                />
+            )}
+
             {/* ── Header ── */}
             <div className="page-header">
                 <div>
@@ -455,17 +673,30 @@ export default function PurchasePage() {
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                     {tab === 'new' && (
-                        <button onClick={() => setShowScanner(true)} style={{
-                            padding: '0.45rem 1.1rem', borderRadius: 10, fontFamily: 'inherit',
-                            fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
-                            border: 'none',
-                            background: 'linear-gradient(135deg, #7C3AED, #A78BFA)',
-                            color: '#fff',
-                            boxShadow: '0 2px 12px rgba(124,58,237,0.3)',
-                            display: 'flex', alignItems: 'center', gap: 6,
-                        }}>
-                            📷 AI อ่านบิล
-                        </button>
+                        <>
+                            <button onClick={() => setShowStockSheet(true)} style={{
+                                padding: '0.45rem 1.1rem', borderRadius: 10, fontFamily: 'inherit',
+                                fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #059669, #10B981)',
+                                color: '#fff',
+                                boxShadow: '0 2px 12px rgba(5,150,105,0.3)',
+                                display: 'flex', alignItems: 'center', gap: 6,
+                            }}>
+                                📋 AI อ่านใบสต็อค
+                            </button>
+                            <button onClick={() => setShowScanner(true)} style={{
+                                padding: '0.45rem 1.1rem', borderRadius: 10, fontFamily: 'inherit',
+                                fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #7C3AED, #A78BFA)',
+                                color: '#fff',
+                                boxShadow: '0 2px 12px rgba(124,58,237,0.3)',
+                                display: 'flex', alignItems: 'center', gap: 6,
+                            }}>
+                                📷 AI อ่านบิล
+                            </button>
+                        </>
                     )}
                     {(['new', 'history'] as const).map(t => (
                         <button key={t} onClick={() => setTab(t)} style={{
