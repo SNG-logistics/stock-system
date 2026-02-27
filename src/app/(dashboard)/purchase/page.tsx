@@ -89,42 +89,15 @@ function StockSheetScannerModal({ onClose, onImport }: {
     const [imageData, setImageData] = useState<string | null>(null)
     const [scanning, setScanning] = useState(false)
     const [result, setResult] = useState<{ sheetDate: string | null; items: { name: string; unit: string; quantityIn: number; costPerUnit: number; totalCost: number; remaining: number | null }[] } | null>(null)
-    const videoRef = useRef<HTMLVideoElement>(null)
-    const streamRef = useRef<MediaStream | null>(null)
-    const fileInputRef = useRef<HTMLInputElement>(null)
-
-    const startCamera = useCallback(async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }
-            })
-            streamRef.current = stream
-            if (videoRef.current) videoRef.current.srcObject = stream
-            setMode('camera')
-        } catch { toast.error('ไม่สามารถเปิดกล้องได้') }
-    }, [])
-
-    const stopCamera = useCallback(() => {
-        streamRef.current?.getTracks().forEach(t => t.stop())
-        streamRef.current = null
-    }, [])
-
-    useEffect(() => () => stopCamera(), [stopCamera])
-
-    const capture = () => {
-        const video = videoRef.current; if (!video) return
-        const canvas = document.createElement('canvas')
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight
-        canvas.getContext('2d')?.drawImage(video, 0, 0)
-        setImageData(canvas.toDataURL('image/jpeg', 0.92))
-        stopCamera(); setMode('preview')
-    }
+    const cameraInputRef = useRef<HTMLInputElement>(null)
+    const galleryInputRef = useRef<HTMLInputElement>(null)
 
     const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return
         const reader = new FileReader()
         reader.onload = ev => { setImageData(ev.target?.result as string); setMode('preview') }
         reader.readAsDataURL(file)
+        e.target.value = ''
     }
 
     const scan = async () => {
@@ -142,7 +115,7 @@ function StockSheetScannerModal({ onClose, onImport }: {
         finally { setScanning(false) }
     }
 
-    const reset = () => { setImageData(null); setResult(null); setMode('choose'); stopCamera() }
+    const reset = () => { setImageData(null); setResult(null); setMode('choose') }
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 500, padding: '0.75rem', backdropFilter: 'blur(6px)' }}>
@@ -153,38 +126,29 @@ function StockSheetScannerModal({ onClose, onImport }: {
                         <div style={{ fontWeight: 800, fontSize: '1rem' }}>📋 AI อ่านใบสต็อคของสด</div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>ถ่ายรูปใบสต็อค — AI จะอ่านรายการรับเข้าให้อัตโนมัติ</div>
                     </div>
-                    <button onClick={() => { stopCamera(); onClose() }} style={{ background: 'var(--bg)', border: 'none', borderRadius: 8, width: 36, height: 36, cursor: 'pointer', fontSize: '1rem', color: 'var(--text-muted)' }}>✕</button>
+                    <button onClick={() => { onClose() }} style={{ background: 'var(--bg)', border: 'none', borderRadius: 8, width: 36, height: 36, cursor: 'pointer', fontSize: '1rem', color: 'var(--text-muted)' }}>✕</button>
                 </div>
 
                 <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }}>
                     {mode === 'choose' && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                             {[
-                                { icon: '📷', label: 'ถ่ายรูปใบสต็อค', action: startCamera },
-                                { icon: '🖼️', label: 'อัปโหลดรูป', action: () => fileInputRef.current?.click() },
+                                { icon: '📷', label: 'ถ่ายรูป\n(กล้องหลัง)', color: '#059669', ref: cameraInputRef },
+                                { icon: '🖼️', label: 'อัปโหลดรูป\nจากอัลบั้ม', color: '#7C3AED', ref: galleryInputRef },
                             ].map(b => (
-                                <button key={b.label} onClick={b.action} style={{ padding: '2.5rem 1rem', borderRadius: 14, border: '2px dashed var(--border)', background: 'var(--bg)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, transition: 'all 0.18s' }}
-                                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#059669'; e.currentTarget.style.background = 'rgba(5,150,105,0.05)' }}
+                                <button key={b.icon} onClick={() => b.ref.current?.click()} style={{ padding: '2rem 1rem', borderRadius: 14, border: '2px dashed var(--border)', background: 'var(--bg)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, transition: 'all 0.18s', minHeight: 130 }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = b.color; e.currentTarget.style.background = `${b.color}10` }}
                                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg)' }}>
                                     <span style={{ fontSize: '2.5rem' }}>{b.icon}</span>
-                                    <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{b.label}</span>
+                                    <span style={{ fontWeight: 700, fontSize: '0.85rem', textAlign: 'center', whiteSpace: 'pre-line', lineHeight: 1.3 }}>{b.label}</span>
                                 </button>
                             ))}
-                            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFileChange} />
+                            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={onFileChange} />
+                            <input ref={galleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFileChange} />
                         </div>
                     )}
 
-                    {mode === 'camera' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', aspectRatio: '4/3' }}>
-                                <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            </div>
-                            <div style={{ display: 'flex', gap: 10 }}>
-                                <button onClick={reset} style={{ flex: 1, padding: '0.65rem', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--white)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>← กลับ</button>
-                                <button onClick={capture} style={{ flex: 2, padding: '0.65rem', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#059669,#10B981)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>📸 ถ่ายรูป</button>
-                            </div>
-                        </div>
-                    )}
+
 
                     {mode === 'preview' && !result && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -273,42 +237,8 @@ function BillScannerModal({
     const [imageData, setImageData] = useState<string | null>(null)
     const [scanning, setScanning] = useState(false)
     const [result, setResult] = useState<ScanResult | null>(null)
-    const videoRef = useRef<HTMLVideoElement>(null)
-    const streamRef = useRef<MediaStream | null>(null)
+    const cameraInputRef = useRef<HTMLInputElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
-
-    const startCamera = useCallback(async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-            })
-            streamRef.current = stream
-            if (videoRef.current) videoRef.current.srcObject = stream
-            setMode('camera')
-        } catch {
-            toast.error('ไม่สามารถเปิดกล้องได้ กรุณาเปิดสิทธิ์กล้อง')
-        }
-    }, [])
-
-    const stopCamera = useCallback(() => {
-        streamRef.current?.getTracks().forEach(t => t.stop())
-        streamRef.current = null
-    }, [])
-
-    useEffect(() => () => stopCamera(), [stopCamera])
-
-    const capture = () => {
-        const video = videoRef.current
-        if (!video) return
-        const canvas = document.createElement('canvas')
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-        canvas.getContext('2d')?.drawImage(video, 0, 0)
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
-        setImageData(dataUrl)
-        stopCamera()
-        setMode('preview')
-    }
 
     const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -319,6 +249,7 @@ function BillScannerModal({
             setMode('preview')
         }
         reader.readAsDataURL(file)
+        e.target.value = ''
     }
 
     const scan = async () => {
@@ -371,7 +302,7 @@ function BillScannerModal({
                         <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>📷 AI อ่านบิล</div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>ถ่ายหรืออัปโหลดรูปบิล — AI จะอ่านรายการให้อัตโนมัติ</div>
                     </div>
-                    <button onClick={() => { stopCamera(); onClose() }}
+                    <button onClick={() => onClose()}
                         style={{ background: 'var(--bg)', border: 'none', borderRadius: 8, width: 36, height: 36, cursor: 'pointer', fontSize: '1rem', color: 'var(--text-muted)' }}>
                         ✕
                     </button>
@@ -382,53 +313,32 @@ function BillScannerModal({
                     {/* ── CHOOSE ── */}
                     {mode === 'choose' && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                            <button onClick={startCamera} style={{
-                                padding: '2.5rem 1rem', borderRadius: 14, border: '2px dashed var(--border)',
+                            <button onClick={() => cameraInputRef.current?.click()} style={{
+                                padding: '2rem 1rem', borderRadius: 14, border: '2px dashed var(--border)',
                                 background: 'var(--bg)', cursor: 'pointer', fontFamily: 'inherit',
-                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-                                transition: 'all 0.18s',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                                transition: 'all 0.18s', minHeight: 130,
                             }}
                                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-bg)' }}
                                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg)' }}
                             >
                                 <span style={{ fontSize: '2.5rem' }}>📷</span>
-                                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)' }}>ถ่ายรูปบิล</span>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ใช้กล้องถ่ายตรงๆ</span>
+                                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', textAlign: 'center', whiteSpace: 'pre-line', lineHeight: 1.3 }}>{'ถ่ายรูปบิล\n(กล้องหลัง)'}</span>
                             </button>
                             <button onClick={() => fileInputRef.current?.click()} style={{
-                                padding: '2.5rem 1rem', borderRadius: 14, border: '2px dashed var(--border)',
+                                padding: '2rem 1rem', borderRadius: 14, border: '2px dashed var(--border)',
                                 background: 'var(--bg)', cursor: 'pointer', fontFamily: 'inherit',
-                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-                                transition: 'all 0.18s',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                                transition: 'all 0.18s', minHeight: 130,
                             }}
                                 onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563EB'; e.currentTarget.style.background = 'rgba(37,99,235,0.05)' }}
                                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg)' }}
                             >
                                 <span style={{ fontSize: '2.5rem' }}>🖼️</span>
-                                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)' }}>อัปโหลดรูป</span>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>เลือกไฟล์ภาพจากเครื่อง</span>
+                                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', textAlign: 'center', whiteSpace: 'pre-line', lineHeight: 1.3 }}>{'อัปโหลดรูป\nจากอัลบั้ม'}</span>
                             </button>
+                            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={onFileChange} />
                             <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFileChange} />
-                        </div>
-                    )}
-
-                    {/* ── CAMERA ── */}
-                    {mode === 'camera' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-                            <div style={{ width: '100%', borderRadius: 12, overflow: 'hidden', background: '#000', aspectRatio: '16/9' }}>
-                                <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            </div>
-                            <div style={{ display: 'flex', gap: 10, width: '100%' }}>
-                                <button onClick={reset} className="btn-outline" style={{ flex: 1 }}>← กลับ</button>
-                                <button onClick={capture} style={{
-                                    flex: 2, padding: '0.7rem', borderRadius: 10, border: 'none',
-                                    background: 'linear-gradient(135deg, var(--accent), #FF6B81)',
-                                    color: '#fff', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit',
-                                    boxShadow: '0 4px 16px rgba(232,54,78,0.3)',
-                                }}>
-                                    📸 ถ่ายรูป
-                                </button>
-                            </div>
                         </div>
                     )}
 
