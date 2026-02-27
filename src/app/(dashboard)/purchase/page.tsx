@@ -286,7 +286,6 @@ function BillScannerModal({
         setImageData(null)
         setResult(null)
         setMode('choose')
-        stopCamera()
     }
 
     return (
