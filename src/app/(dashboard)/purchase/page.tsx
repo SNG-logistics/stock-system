@@ -80,6 +80,58 @@ function ProductCombobox({ products, value, onChange }: {
     )
 }
 
+// ── Image Preprocessing for OCR ──────────────────────────────────────────
+function applySharpenKernel(imageData: ImageData): ImageData {
+    const { width, height, data } = imageData
+    const out = new ImageData(width, height)
+    const d = out.data
+    // Unsharp mask kernel: 0,-1,0,-1,5,-1,0,-1,0
+    const k = [0, -1, 0, -1, 5, -1, 0, -1, 0]
+    for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+            const i = (y * width + x) * 4
+            for (let c = 0; c < 3; c++) {
+                let s = 0
+                for (let ky = -1; ky <= 1; ky++)
+                    for (let kx = -1; kx <= 1; kx++)
+                        s += data[((y + ky) * width + (x + kx)) * 4 + c] * k[(ky + 1) * 3 + (kx + 1)]
+                d[i + c] = Math.max(0, Math.min(255, s))
+            }
+            d[i + 3] = 255
+        }
+    }
+    // copy edges
+    for (let x = 0; x < width; x++) for (const y of [0, height - 1]) { const i = (y * width + x) * 4; d[i] = data[i]; d[i + 1] = data[i + 1]; d[i + 2] = data[i + 2]; d[i + 3] = 255 }
+    for (let y = 0; y < height; y++) for (const x of [0, width - 1]) { const i = (y * width + x) * 4; d[i] = data[i]; d[i + 1] = data[i + 1]; d[i + 2] = data[i + 2]; d[i + 3] = 255 }
+    return out
+}
+
+function preprocessImageForOCR(dataUrl: string): Promise<string> {
+    return new Promise(resolve => {
+        const img = new Image()
+        img.onload = () => {
+            // Scale up small images so the AI can read fine detail
+            const maxDim = Math.max(img.width, img.height)
+            const scale = maxDim < 1600 ? Math.min(3, 1600 / maxDim) : 1
+            const w = Math.round(img.width * scale)
+            const h = Math.round(img.height * scale)
+            const canvas = document.createElement('canvas')
+            canvas.width = w; canvas.height = h
+            const ctx = canvas.getContext('2d')!
+            // Step 1: Grayscale + contrast + brightness via CSS filter
+            ctx.filter = 'grayscale(100%) contrast(190%) brightness(115%)'
+            ctx.drawImage(img, 0, 0, w, h)
+            ctx.filter = 'none'
+            // Step 2: Sharpen convolution
+            const raw = ctx.getImageData(0, 0, w, h)
+            ctx.putImageData(applySharpenKernel(raw), 0, 0)
+            resolve(canvas.toDataURL('image/jpeg', 0.95))
+        }
+        img.onerror = () => resolve(dataUrl) // fallback
+        img.src = dataUrl
+    })
+}
+
 // ── Stock Sheet Scanner Modal ──────────────────────────────────────────────
 function StockSheetScannerModal({ onClose, onImport }: {
     onClose: () => void
@@ -104,9 +156,11 @@ function StockSheetScannerModal({ onClose, onImport }: {
         if (!imageData) return
         setScanning(true)
         try {
+            // Preprocess: grayscale + contrast + sharpen before sending to AI
+            const enhanced = await preprocessImageForOCR(imageData)
             const res = await fetch('/api/ai/scan-stock-sheet', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: imageData })
+                body: JSON.stringify({ image: enhanced })
             })
             const json = await res.json()
             if (json.success) setResult(json.data)
