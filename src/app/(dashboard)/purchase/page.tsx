@@ -5,23 +5,24 @@ import toast from 'react-hot-toast'
 
 interface Product { id: string; sku: string; name: string; unit: string; costPrice: number }
 interface Location { id: string; code: string; name: string }
-interface PurchaseItem { productId: string; productName: string; unit: string; locationId: string; quantity: number; unitCost: number }
+interface PurchaseItem { productId: string; productName: string; unit: string; locationId: string; quantity: number; unitCost: number; searchText?: string }
 interface ScannedItem { name: string; quantity: number; unit: string; unitPrice: number; totalPrice: number }
 interface ScanResult { supplier: string | null; billDate: string | null; items: ScannedItem[]; totalAmount: number; notes: string | null }
 interface StockSheetItem { name: string; unit: string; quantityIn: number; costPerUnit: number; totalCost: number; remaining: number | null }
 interface StockSheetResult { sheetDate: string | null; items: StockSheetItem[] }
 
 // ---- Product Combobox ----
-function ProductCombobox({ products, value, onChange }: {
+function ProductCombobox({ products, value, onChange, initialQuery }: {
     products: Product[]
     value: string
     onChange: (p: Product) => void
+    initialQuery?: string
 }) {
-    const [query, setQuery] = useState('')
+    const [query, setQuery] = useState(initialQuery && !value ? initialQuery : '')
     const [open, setOpen] = useState(false)
     const ref = useRef<HTMLDivElement>(null)
     const selected = products.find(p => p.id === value)
-    const displayValue = open ? query : (selected ? `${selected.name}` : '')
+    const displayValue = open ? query : (selected ? `${selected.name}` : (initialQuery && !value ? initialQuery : ''))
     const filtered = query.length === 0
         ? products.slice(0, 40)
         : products.filter(p =>
@@ -32,7 +33,8 @@ function ProductCombobox({ products, value, onChange }: {
     useEffect(() => {
         function handle(e: MouseEvent) {
             if (ref.current && !ref.current.contains(e.target as Node)) {
-                setOpen(false); setQuery('')
+                setOpen(false)
+                if (!value) setQuery(initialQuery || '')
             }
         }
         document.addEventListener('mousedown', handle)
@@ -46,7 +48,7 @@ function ProductCombobox({ products, value, onChange }: {
                 placeholder="🔍 พิมพ์ชื่อ หรือ SKU..."
                 value={displayValue}
                 style={{ fontSize: '0.83rem', width: '100%' }}
-                onFocus={() => { setOpen(true); setQuery('') }}
+                onFocus={() => { setOpen(true); setQuery(query || '') }}
                 onChange={e => { setQuery(e.target.value); setOpen(true) }}
             />
             {open && (
@@ -567,6 +569,28 @@ export default function PurchasePage() {
         toast.success(`✅ นำเข้า ${newItems.length} รายการจากบิล`)
     }
 
+    function fuzzyMatchProduct(products: Product[], name: string): Product | undefined {
+        const norm = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/[^ก-๙a-z0-9]/g, '')
+        const target = norm(name)
+        // 1. Exact normalized match
+        let found = products.find(p => norm(p.name) === target)
+        if (found) return found
+        // 2. One contains the other (normalized)
+        found = products.find(p => norm(p.name).includes(target) || target.includes(norm(p.name)))
+        if (found) return found
+        // 3. Token overlap: split by Thai/space boundary, score by shared tokens
+        const targetTokens = name.toLowerCase().split(/\s+/).filter(t => t.length >= 2)
+        let best: Product | undefined
+        let bestScore = 0
+        for (const p of products) {
+            const pTokens = p.name.toLowerCase().split(/\s+/)
+            const shared = targetTokens.filter(t => pTokens.some(pt => pt.includes(t) || t.includes(pt)))
+            const score = shared.length / Math.max(targetTokens.length, pTokens.length)
+            if (score > bestScore && score >= 0.5) { bestScore = score; best = p }
+        }
+        return best
+    }
+
     function handleStockSheetImport(result: StockSheetResult) {
         const defLoc = locations.find(l => l.code === 'WH_MAIN') || locations[0]
         if (!defLoc) return
@@ -574,10 +598,7 @@ export default function PurchasePage() {
         const newItems: PurchaseItem[] = result.items
             .filter(si => si.quantityIn > 0)
             .map(si => {
-                const matched = products.find(p =>
-                    p.name.toLowerCase().includes(si.name.toLowerCase()) ||
-                    si.name.toLowerCase().includes(p.name.toLowerCase())
-                )
+                const matched = fuzzyMatchProduct(products, si.name)
                 return {
                     productId: matched?.id || '',
                     productName: matched?.name || si.name,
@@ -585,13 +606,16 @@ export default function PurchasePage() {
                     locationId: defLoc.id,
                     quantity: si.quantityIn,
                     unitCost: si.costPerUnit,
+                    searchText: matched ? undefined : si.name, // pre-fill combobox for unmatched
                 }
             })
 
+        const matched = newItems.filter(i => i.productId).length
+        const unmatched = newItems.length - matched
         setItems(prev => [...prev, ...newItems])
         if (result.sheetDate) setPurchaseDate(result.sheetDate)
         setShowStockSheet(false)
-        toast.success(`✅ นำเข้า ${newItems.length} รายการจากใบสต็อค`)
+        toast.success(`✅ นำเข้า ${newItems.length} รายการ (จับคู่ ${matched}/${newItems.length}${unmatched > 0 ? ` — เหลือ ${unmatched} รายการต้องเลือกสินค้า` : ''})`)
     }
 
     const total = items.reduce((s, i) => s + i.quantity * i.unitCost, 0)
@@ -759,7 +783,7 @@ export default function PurchasePage() {
                                         background: 'var(--bg)', borderRadius: 10, padding: '0.55rem 0.6rem',
                                         border: item.productId ? '1px solid var(--border)' : '1px solid rgba(232,54,78,0.25)',
                                     }}>
-                                        <ProductCombobox products={products} value={item.productId} onChange={p => selectProduct(i, p)} />
+                                        <ProductCombobox products={products} value={item.productId} onChange={p => selectProduct(i, p)} initialQuery={item.searchText} />
                                         <select value={item.locationId} onChange={e => updateItem(i, 'locationId', e.target.value)} className="input" style={{ fontSize: '0.82rem' }}>
                                             {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                                         </select>
