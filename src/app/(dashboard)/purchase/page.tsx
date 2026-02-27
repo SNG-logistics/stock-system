@@ -180,7 +180,15 @@ function StockSheetScannerModal({ onClose, onImport }: {
                                 </div>
                                 {result.items.map((item, i) => (
                                     <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 80px 90px', gap: 6, alignItems: 'center', background: 'var(--bg)', borderRadius: 10, padding: '0.5rem 0.6rem', border: `1px solid ${item.quantityIn > 0 ? 'var(--border)' : 'rgba(239,68,68,0.2)'}` }}>
-                                        <div style={{ fontWeight: 600, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.name}>{item.name}</div>
+                                        <input
+                                            value={item.name}
+                                            onChange={e => {
+                                                const updated = [...result.items]
+                                                updated[i] = { ...updated[i], name: e.target.value }
+                                                setResult({ ...result, items: updated })
+                                            }}
+                                            style={{ fontSize: '0.82rem', padding: '3px 6px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--white)', fontFamily: 'inherit', width: '100%', fontWeight: 600 }}
+                                        />
                                         <input
                                             value={item.unit}
                                             onChange={e => {
