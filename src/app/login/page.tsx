@@ -208,19 +208,29 @@ export default function LoginPage() {
 
                     {/* Quick credentials hint */}
                     <div style={{ marginTop: '2rem', padding: '1rem', background: '#FEF2F2', borderRadius: 12, border: '1px solid #FECACA' }}>
-                        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#DC2626', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                            🔑 Default Credentials
+                        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#DC2626', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            🔑 รหัสผ่านเริ่มต้น — กดเพื่อกรอกอัตโนมัติ
                         </p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             {[
-                                ['owner', 'owner1234'], ['manager', 'manager1234'],
-                                ['warehouse', 'staff1234'], ['cashier', 'staff1234'],
-                            ].map(([u, p]) => (
+                                { u: 'owner', p: 'owner1234', label: '👑 เจ้าของร้าน' },
+                                { u: 'manager', p: 'manager1234', label: '📊 ผู้จัดการ' },
+                                { u: 'cashier', p: 'staff1234', label: '💰 แคชเชียร์' },
+                                { u: 'kitchen', p: 'staff1234', label: '🍳 ครัว' },
+                                { u: 'bar', p: 'staff1234', label: '🍸 บาร์' },
+                                { u: 'warehouse', p: 'staff1234', label: '🏭 คลังสินค้า' },
+                            ].map(({ u, p, label }) => (
                                 <button key={u} onClick={() => setForm({ username: u, password: p })} style={{
-                                    background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                                    padding: '2px 0', fontFamily: 'monospace', fontSize: '0.72rem', color: '#DC2626'
-                                }}>
-                                    {u} / {p}
+                                    background: 'none', border: '1px solid #FECACA', borderRadius: 6, cursor: 'pointer',
+                                    textAlign: 'left', padding: '4px 8px', fontFamily: 'monospace', fontSize: '0.72rem',
+                                    color: '#DC2626', display: 'flex', justifyContent: 'space-between', gap: 8,
+                                    transition: 'background 0.15s',
+                                }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = '#FEE2E2')}
+                                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                                >
+                                    <span>{label}</span>
+                                    <span style={{ opacity: 0.6 }}>{u} / {p}</span>
                                 </button>
                             ))}
                         </div>
