@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback, useRef, type ChangeEvent } from 'react'
+import { useEffect, useState, useCallback, useRef, type ChangeEvent, type DragEvent } from 'react'
 import { formatLAK } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
@@ -28,6 +28,7 @@ export default function MenuPage() {
     const [editProduct, setEditProduct] = useState<Product | null>(null)
     const [photoProduct, setPhotoProduct] = useState<Product | null>(null)
     const [isMobile, setIsMobile] = useState(false)
+    const [showImport, setShowImport] = useState(false)
 
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth < 768)
@@ -99,21 +100,42 @@ export default function MenuPage() {
                         <span style={{ color: '#059669', fontWeight: 700 }}>{totalMenuCount}</span> เมนู
                     </p>
                 </div>
-                <button
-                    onClick={() => { setEditProduct(null); setShowForm(true) }}
-                    style={{
-                        minHeight: 44, whiteSpace: 'nowrap', gap: 8, display: 'flex', alignItems: 'center',
-                        padding: '0 1.25rem', borderRadius: 12, border: 'none', cursor: 'pointer',
-                        background: 'linear-gradient(135deg, #059669, #10B981)',
-                        color: '#fff', fontWeight: 700, fontSize: '0.9rem', fontFamily: 'inherit',
-                        boxShadow: '0 4px 14px rgba(5,150,105,0.4)',
-                        transition: 'all 0.18s ease',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg,#047857,#059669)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg,#059669,#10B981)'; e.currentTarget.style.transform = 'translateY(0)' }}
-                >
-                    ➕ เพิ่มเมนูใหม่
-                </button>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: isMobile ? 'stretch' : 'flex-end' }}>
+                    {/* Import Button */}
+                    <button
+                        onClick={() => setShowImport(true)}
+                        style={{
+                            minHeight: 44, whiteSpace: 'nowrap', gap: 8, display: 'flex', alignItems: 'center',
+                            padding: '0 1.25rem', borderRadius: 12, cursor: 'pointer',
+                            background: '#fff',
+                            border: '1.5px solid #10B981',
+                            color: '#059669', fontWeight: 700, fontSize: '0.9rem', fontFamily: 'inherit',
+                            transition: 'all 0.18s ease',
+                            flex: isMobile ? 1 : undefined,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#ECFDF5' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#fff' }}
+                    >
+                        📂 Import Excel
+                    </button>
+                    {/* Add Menu Button */}
+                    <button
+                        onClick={() => { setEditProduct(null); setShowForm(true) }}
+                        style={{
+                            minHeight: 44, whiteSpace: 'nowrap', gap: 8, display: 'flex', alignItems: 'center',
+                            padding: '0 1.25rem', borderRadius: 12, border: 'none', cursor: 'pointer',
+                            background: 'linear-gradient(135deg, #059669, #10B981)',
+                            color: '#fff', fontWeight: 700, fontSize: '0.9rem', fontFamily: 'inherit',
+                            boxShadow: '0 4px 14px rgba(5,150,105,0.4)',
+                            transition: 'all 0.18s ease',
+                            flex: isMobile ? 1 : undefined,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg,#047857,#059669)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg,#059669,#10B981)'; e.currentTarget.style.transform = 'translateY(0)' }}
+                    >
+                        ➕ เพิ่มเมนูใหม่
+                    </button>
+                </div>
             </div>
 
             {/* Tabs - Green theme */}
@@ -236,6 +258,13 @@ export default function MenuPage() {
                     categories={allCategories}
                     onClose={() => { setShowForm(false); setEditProduct(null) }}
                     onSaved={() => { setShowForm(false); setEditProduct(null); fetchProducts() }}
+                />
+            )}
+
+            {showImport && (
+                <ImportMenuModal
+                    onClose={() => setShowImport(false)}
+                    onDone={() => { setShowImport(false); fetchProducts() }}
                 />
             )}
 
@@ -602,6 +631,194 @@ function PhotoCaptureModal({ product, onClose, onDone }: {
                             </div>
                         </div>
                     )}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// ─── Import Menu Modal ───────────────────────────────────────────
+type ImportResult = { row: number; status: 'created' | 'skipped' | 'error'; name: string; reason?: string }
+type ImportSummary = { created: number; skipped: number; errors: number; total: number; results: ImportResult[] }
+
+function ImportMenuModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+    const [file, setFile] = useState<File | null>(null)
+    const [dragging, setDragging] = useState(false)
+    const [importing, setImporting] = useState(false)
+    const [summary, setSummary] = useState<ImportSummary | null>(null)
+    const [importError, setImportError] = useState<string | null>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const handleFile = (f: File) => {
+        if (!f.name.match(/\.(xlsx|xls)$/i)) { setImportError('กรุณาเลือกไฟล์ Excel (.xlsx หรือ .xls)'); return }
+        setFile(f); setImportError(null); setSummary(null)
+    }
+    const onFilePick = (e: ChangeEvent<HTMLInputElement>) => { if (e.target.files?.[0]) handleFile(e.target.files[0]) }
+    const onDropFile = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault(); setDragging(false)
+        if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0])
+    }
+
+    const doImport = async () => {
+        if (!file) return
+        setImporting(true); setImportError(null)
+        const fd = new FormData(); fd.append('file', file)
+        try {
+            const res = await fetch('/api/products/import', { method: 'POST', body: fd })
+            const json = await res.json()
+            if (json.success) { setSummary(json.data); toast.success(`✅ Import สำเร็จ ${json.data.created} รายการ`) }
+            else setImportError(json.error || 'Import ไม่สำเร็จ')
+        } catch { setImportError('เกิดข้อผิดพลาดในการอัปโหลด') }
+        finally { setImporting(false) }
+    }
+
+    const downloadTemplate = () => {
+        const rows = [
+            ['ชื่อเมนู', 'หมวดหมู่', 'ราคาขาย', 'ต้นทุน', 'หน่วย', 'ประเภท', 'หมายเหตุ'],
+            ['ไก่ผัดเม็ดมะม่วง', 'FOOD_FRY', 65000, 30000, 'จาน', 'SALE_ITEM', ''],
+            ['เบียร์ลาว', 'BEER', 30000, 15000, 'ขวด', 'SALE_ITEM', ''],
+            ['ปลาหมึกย่าง', 'FOOD_SEA', 80000, 40000, 'จาน', 'SALE_ITEM', ''],
+        ]
+        const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n')
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
+        a.download = 'template-menu-import.csv'; a.click()
+    }
+
+    const statusIcon = (s: string) => s === 'created' ? '✅' : s === 'skipped' ? '⏭️' : '❌'
+    const statusColor = (s: string) => s === 'created' ? '#059669' : s === 'skipped' ? '#D97706' : '#DC2626'
+
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 200, padding: '1rem', backdropFilter: 'blur(5px)',
+        }} onClick={onClose}>
+            <div style={{
+                background: 'var(--white)', borderRadius: 20, width: '100%', maxWidth: 560,
+                maxHeight: '90vh', overflowY: 'auto',
+                boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
+            }} onClick={e => e.stopPropagation()}>
+                <div style={{ height: 4, background: 'linear-gradient(135deg,#059669,#10B981)', borderRadius: '20px 20px 0 0' }} />
+
+                {/* Header */}
+                <div style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
+                    <div>
+                        <div style={{ fontWeight: 800, fontSize: '1rem', color: '#065F46' }}>📂 Import เมนูจาก Excel</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>นำเข้าเมนูหลายรายการพร้อมกัน</div>
+                    </div>
+                    <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: '1rem', color: 'var(--text-muted)' }}>✕</button>
+                </div>
+
+                <div style={{ padding: '1.25rem' }}>
+                    {/* Template download */}
+                    <div style={{
+                        background: '#F0FDF4', borderRadius: 10, padding: '10px 14px', marginBottom: 14,
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                        border: '1px solid #BBF7D0',
+                    }}>
+                        <span style={{ fontSize: '0.78rem', color: '#065F46', fontWeight: 500 }}>📋 ดาวน์โหลด template ก่อนกรอกข้อมูล</span>
+                        <button onClick={downloadTemplate} style={{
+                            padding: '5px 12px', borderRadius: 8, border: '1px solid #10B981', flexShrink: 0,
+                            background: '#fff', color: '#059669', fontWeight: 700,
+                            fontSize: '0.75rem', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                        }}>⬇ Template</button>
+                    </div>
+
+                    {/* Column info */}
+                    <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.7 }}>
+                        <strong style={{ color: 'var(--text)' }}>คอลัมน์ที่รองรับ:</strong>{' '}
+                        <span style={{ color: '#DC2626' }}>ชื่อเมนู*</span>,{' '}
+                        <span style={{ color: '#DC2626' }}>หมวดหมู่*</span>{' (code: FOOD_FRY, BEER ฯลฯ), '}
+                        ราคาขาย, ต้นทุน, หน่วย, ประเภท, หมายเหตุ
+                    </div>
+
+                    {/* Drop zone */}
+                    {!summary && (
+                        <div
+                            onDragOver={e => { e.preventDefault(); setDragging(true) }}
+                            onDragLeave={() => setDragging(false)}
+                            onDrop={onDropFile}
+                            onClick={() => fileInputRef.current?.click()}
+                            style={{
+                                border: `2.5px dashed ${dragging ? '#10B981' : file ? '#10B981' : '#BBF7D0'}`,
+                                borderRadius: 16, padding: '2rem 1.25rem', textAlign: 'center',
+                                background: dragging || file ? '#F0FDF4' : 'var(--bg)',
+                                cursor: 'pointer', transition: 'all 0.18s', marginBottom: 12,
+                            }}
+                        >
+                            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={onFilePick} />
+                            <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>{file ? '📊' : '📂'}</div>
+                            {file ? (
+                                <>
+                                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#059669' }}>{file.name}</div>
+                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>{(file.size / 1024).toFixed(1)} KB — คลิกเพื่อเปลี่ยนไฟล์</div>
+                                </>
+                            ) : (
+                                <>
+                                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#374151' }}>วางไฟล์ที่นี่ หรือคลิกเพื่อเลือก</div>
+                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>รองรับ .xlsx และ .xls</div>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Error */}
+                    {importError && (
+                        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '10px 14px', color: '#DC2626', fontSize: '0.82rem', fontWeight: 500, marginBottom: 12 }}>❌ {importError}</div>
+                    )}
+
+                    {/* Summary */}
+                    {summary && (
+                        <div style={{ marginBottom: 14 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
+                                {[
+                                    { label: 'เพิ่มแล้ว', value: summary.created, color: '#059669', bg: '#F0FDF4', border: '#A7F3D0' },
+                                    { label: 'ข้าม (ซ้ำ)', value: summary.skipped, color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
+                                    { label: 'ผิดพลาด', value: summary.errors, color: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
+                                ].map(s => (
+                                    <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 10, padding: '10px 0', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: s.color }}>{s.value}</div>
+                                        <div style={{ fontSize: '0.68rem', color: s.color, fontWeight: 600 }}>{s.label}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div style={{ maxHeight: 220, overflowY: 'auto', borderRadius: 10, border: '1px solid var(--border)' }}>
+                                {summary.results.map((r, i) => (
+                                    <div key={i} style={{
+                                        display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+                                        borderBottom: '1px solid var(--border-light)',
+                                        background: i % 2 === 0 ? 'var(--white)' : 'var(--bg)',
+                                    }}>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', width: 32, flexShrink: 0 }}>#{r.row}</span>
+                                        <span>{statusIcon(r.status)}</span>
+                                        <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
+                                        {r.reason && <span style={{ fontSize: '0.7rem', color: statusColor(r.status), flexShrink: 0, maxWidth: 160, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.reason}</span>}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <button onClick={summary ? onDone : onClose} style={{
+                            flex: 1, minHeight: 44, borderRadius: 12, border: '1px solid var(--border)',
+                            background: 'var(--white)', cursor: 'pointer', fontFamily: 'inherit',
+                            fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)',
+                        }}>ปิด</button>
+                        {!summary && (
+                            <button onClick={doImport} disabled={!file || importing} style={{
+                                flex: 2, minHeight: 44, borderRadius: 12, border: 'none',
+                                background: !file || importing ? '#9CA3AF' : 'linear-gradient(135deg,#059669,#10B981)',
+                                color: '#fff', fontWeight: 700, fontSize: '0.9rem',
+                                cursor: !file || importing ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                                boxShadow: !file || importing ? 'none' : '0 4px 14px rgba(5,150,105,0.35)',
+                            }}>
+                                {importing ? '⏳ กำลัง Import...' : '📂 เริ่ม Import'}
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
