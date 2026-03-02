@@ -1,13 +1,14 @@
+// @ts-nocheck
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient({
     datasources: {
         db: {
-            url: "mysql://root:OXOzVHxHElHfhrAMzTgOSvdCNosIYAdw@shuttle.proxy.rlwy.net:57623/railway?connection_limit=1&connect_timeout=30"
+            url: "mysql://root:QUTJvTvAiJnBGydQAkBuoToWUZUfRtut@shuttle.proxy.rlwy.net:57623/railway"
+
         }
-    }
-});
+    });
 
 async function main() {
     console.log("Connecting to the new Railway DB...");
