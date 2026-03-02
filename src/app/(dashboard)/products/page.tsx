@@ -18,13 +18,14 @@ const typeLabels: Record<string, string> = {
     PACKAGING: '📦 บรรจุภัณฑ์', ENTERTAIN: '🎭 Entertain',
 }
 
-const RAW_CATEGORY_CODES = ['RAW_MEAT', 'RAW_PORK', 'RAW_SEA', 'RAW_VEG', 'DRY_GOODS', 'PACKAGING', 'OTHER']
+const DRINK_CODES = ['BEER', 'BEER_DRAFT', 'WINE', 'COCKTAIL', 'DRINK', 'WATER']
 const MEAT_CODES = ['RAW_MEAT', 'RAW_PORK', 'RAW_SEA']
 const VEG_CODES = ['RAW_VEG', 'DRY_GOODS', 'OTHER']
 const PKG_CODES = ['PACKAGING']
+const RAW_CATEGORY_CODES = [...MEAT_CODES, ...VEG_CODES, ...PKG_CODES, ...DRINK_CODES]
 const STOCK_TYPES = ['RAW_MATERIAL', 'PACKAGING']
 
-type TabKey = 'meat' | 'veg' | 'pkg' | 'all'
+type TabKey = 'meat' | 'veg' | 'pkg' | 'drink' | 'all'
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<Product[]>([])
@@ -77,6 +78,8 @@ export default function ProductsPage() {
             setCategories(allCategories.filter(c => VEG_CODES.includes(c.code)))
         } else if (activeTab === 'pkg') {
             setCategories(allCategories.filter(c => PKG_CODES.includes(c.code)))
+        } else if (activeTab === 'drink') {
+            setCategories(allCategories.filter(c => DRINK_CODES.includes(c.code)))
         } else {
             setCategories(allCategories.filter(c => RAW_CATEGORY_CODES.includes(c.code)))
         }
@@ -89,12 +92,14 @@ export default function ProductsPage() {
         if (activeTab === 'meat') return MEAT_CODES.includes(p.category?.code)
         if (activeTab === 'veg') return VEG_CODES.includes(p.category?.code)
         if (activeTab === 'pkg') return PKG_CODES.includes(p.category?.code)
+        if (activeTab === 'drink') return DRINK_CODES.includes(p.category?.code)
         return true
     })
 
     const tabs: { key: TabKey; label: string; icon: string }[] = [
         { key: 'meat', label: 'เนื้อ / โปรตีน', icon: '🥩' },
         { key: 'veg', label: 'ผัก / ของแห้ง', icon: '🥬' },
+        { key: 'drink', label: 'เครื่องดื่ม', icon: '🍺' },
         { key: 'pkg', label: 'บรรจุภัณฑ์', icon: '📦' },
         { key: 'all', label: 'ทั้งหมด', icon: '📋' },
     ]
