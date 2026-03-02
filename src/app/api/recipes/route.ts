@@ -33,6 +33,14 @@ export const POST = withAuth<any>(async (req: NextRequest, context: any) => {
         const body = await req.json()
         const data = recipeSchema.parse(body)
 
+        // B-02 Fix: ป้องกัน Recipe ชื่อซ้ำ (menuName ต้อง unique)
+        const existing = await prisma.recipe.findFirst({
+            where: { menuName: { equals: data.menuName }, isActive: true },
+        })
+        if (existing) {
+            return err(`Recipe "${data.menuName}" มีอยู่แล้วในระบบ (ID: ${existing.id}) — กรุณาแก้ไข Recipe เดิม หรือใช้ชื่อใหม่`)
+        }
+
         const recipe = await prisma.recipe.create({
             data: {
                 menuName: data.menuName,

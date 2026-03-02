@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { withAuth, ok, err } from '@/lib/api'
-import { pickTier, getModel, getFallbackModel, checkBudget } from '@/lib/ai-router'
+import { pickTier, checkBudget } from '@/lib/ai-router'
+import { getAiConfig } from '@/lib/ai-config'
 
 const SYSTEM_PROMPT = `You are an AI assistant for 43 Garden Cafe & Restaurant (ร้าน 43 Garden วังเวียง).
 You help with stock management, recipes, menu planning, and general restaurant operations.
@@ -31,9 +32,9 @@ export const POST = withAuth(async (req: NextRequest) => {
             return err('กรุณาส่งข้อความ')
         }
 
-        const apiKey = process.env.OPENROUTER_API_KEY
+        const { apiKey, apiUrl, model } = getAiConfig()
         if (!apiKey) {
-            return err('ไม่พบ OPENROUTER_API_KEY ใน .env')
+            return err('ไม่พบ COMET_API_KEY ใน .env')
         }
 
         // Check budget
@@ -42,9 +43,9 @@ export const POST = withAuth(async (req: NextRequest) => {
             return err(budget.reason || 'งบ AI หมดแล้ว')
         }
 
-        // Pick tier based on complexity
+        // Pick tier modifiers (use base model from config, tier affects temperature/tokens)
         const tier = pickTier(messages)
-        const model = getModel(tier)
+        const maxTokens = tier === 'pro' ? 4096 : tier === 'mid' ? 2048 : 1024
 
         // Build messages with system prompt
         const systemContent = context
@@ -59,40 +60,22 @@ export const POST = withAuth(async (req: NextRequest) => {
             })),
         ]
 
-        // Call OpenRouter
+        // Call CometAPI
         let reply: string
-        let usedModel = model
         let tokensUsed = 0
 
         try {
-            const result = await callOpenRouter(apiKey, usedModel, apiMessages)
+            const result = await callCometAPI(apiKey, apiUrl, model, apiMessages, maxTokens)
             reply = result.reply
             tokensUsed = result.tokensUsed
         } catch (primaryError) {
-            console.error(`Primary model (${usedModel}) failed:`, primaryError)
-
-            // Fallback
-            const fallbackModel = getFallbackModel()
-            if (fallbackModel === usedModel) {
-                return err('AI ไม่สามารถตอบได้ในขณะนี้ กรุณาลองใหม่')
-            }
-
-            console.log(`Retrying with fallback model: ${fallbackModel}`)
-            usedModel = fallbackModel
-
-            try {
-                const result = await callOpenRouter(apiKey, usedModel, apiMessages)
-                reply = result.reply
-                tokensUsed = result.tokensUsed
-            } catch (fallbackError) {
-                console.error('Fallback model also failed:', fallbackError)
-                return err('AI ไม่สามารถตอบได้ในขณะนี้ กรุณาลองใหม่ภายหลัง')
-            }
+            console.error(`CometAPI (${model}) failed:`, primaryError)
+            return err('AI ไม่สามารถตอบได้ในขณะนี้ กรุณาลองใหม่')
         }
 
         return ok({
             reply,
-            model: usedModel,
+            model,
             tier,
             tokensUsed,
         })
@@ -102,32 +85,32 @@ export const POST = withAuth(async (req: NextRequest) => {
     }
 })
 
-async function callOpenRouter(
+async function callCometAPI(
     apiKey: string,
+    apiUrl: string,
     model: string,
-    messages: { role: string; content: string }[]
+    messages: { role: string; content: string }[],
+    maxTokens = 2048,
 ): Promise<{ reply: string; tokensUsed: number }> {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch(`${apiUrl}/chat/completions`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://43garden.stock-system.local',
-            'X-Title': '43 Garden Stock System',
         },
         body: JSON.stringify({
             model,
             messages,
             stream: false,
             temperature: 0.7,
-            max_tokens: 2048,
+            max_tokens: maxTokens,
         }),
     })
 
     if (!response.ok) {
         const errText = await response.text()
-        console.error(`OpenRouter error (${response.status}):`, errText)
-        throw new Error(`OpenRouter API error: ${response.status}`)
+        console.error(`CometAPI error (${response.status}):`, errText)
+        throw new Error(`CometAPI error: ${response.status}`)
     }
 
     const data = await response.json()

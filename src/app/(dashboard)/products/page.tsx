@@ -19,12 +19,12 @@ const typeLabels: Record<string, string> = {
 }
 
 const RAW_CATEGORY_CODES = ['RAW_MEAT', 'RAW_PORK', 'RAW_SEA', 'RAW_VEG', 'DRY_GOODS', 'PACKAGING', 'OTHER']
-const FOOD_CATEGORY_CODES = ['FOOD_GRILL', 'FOOD_FRY', 'FOOD_RICE', 'FOOD_NOODLE', 'FOOD_SEA', 'FOOD_VEG', 'FOOD_LAAB', 'SET']
-const DRINK_CATEGORY_CODES = ['BEER', 'BEER_DRAFT', 'WINE', 'COCKTAIL', 'DRINK', 'WATER', 'KARAOKE', 'ENTERTAIN']
-const SALE_TYPES = ['SALE_ITEM', 'ENTERTAIN']
-const RAW_TYPES = ['RAW_MATERIAL', 'PACKAGING']
+const MEAT_CODES = ['RAW_MEAT', 'RAW_PORK', 'RAW_SEA']
+const VEG_CODES = ['RAW_VEG', 'DRY_GOODS', 'OTHER']
+const PKG_CODES = ['PACKAGING']
+const STOCK_TYPES = ['RAW_MATERIAL', 'PACKAGING']
 
-type TabKey = 'food' | 'drink' | 'raw' | 'all'
+type TabKey = 'meat' | 'veg' | 'pkg' | 'all'
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<Product[]>([])
@@ -38,7 +38,7 @@ export default function ProductsPage() {
     const [showForm, setShowForm] = useState(false)
     const [editProduct, setEditProduct] = useState<Product | null>(null)
     const [showExportMenu, setShowExportMenu] = useState(false)
-    const [activeTab, setActiveTab] = useState<TabKey>('food')
+    const [activeTab, setActiveTab] = useState<TabKey>('meat')
     const [isMobile, setIsMobile] = useState(false)
     const [photoProduct, setPhotoProduct] = useState<Product | null>(null)
 
@@ -70,29 +70,31 @@ export default function ProductsPage() {
     }, [])
 
     useEffect(() => {
-        if (activeTab === 'food') {
-            setCategories(allCategories.filter(c => FOOD_CATEGORY_CODES.includes(c.code)))
-        } else if (activeTab === 'drink') {
-            setCategories(allCategories.filter(c => DRINK_CATEGORY_CODES.includes(c.code)))
-        } else if (activeTab === 'raw') {
-            setCategories(allCategories.filter(c => RAW_CATEGORY_CODES.includes(c.code)))
+        if (activeTab === 'meat') {
+            setCategories(allCategories.filter(c => MEAT_CODES.includes(c.code)))
+        } else if (activeTab === 'veg') {
+            setCategories(allCategories.filter(c => VEG_CODES.includes(c.code)))
+        } else if (activeTab === 'pkg') {
+            setCategories(allCategories.filter(c => PKG_CODES.includes(c.code)))
         } else {
-            setCategories(allCategories)
+            setCategories(allCategories.filter(c => RAW_CATEGORY_CODES.includes(c.code)))
         }
         setSelectedCat('')
     }, [activeTab, allCategories])
 
     const filteredProducts = products.filter(p => {
-        if (activeTab === 'food') return SALE_TYPES.includes(p.productType) && FOOD_CATEGORY_CODES.includes(p.category?.code)
-        if (activeTab === 'drink') return SALE_TYPES.includes(p.productType) && DRINK_CATEGORY_CODES.includes(p.category?.code)
-        if (activeTab === 'raw') return RAW_TYPES.includes(p.productType)
+        // แสดงเฉพาะวัตถุดิบ/บรรจุภัณฑ์ — ไม่แสดงเมนูขาย
+        if (!STOCK_TYPES.includes(p.productType)) return false
+        if (activeTab === 'meat') return MEAT_CODES.includes(p.category?.code)
+        if (activeTab === 'veg') return VEG_CODES.includes(p.category?.code)
+        if (activeTab === 'pkg') return PKG_CODES.includes(p.category?.code)
         return true
     })
 
     const tabs: { key: TabKey; label: string; icon: string }[] = [
-        { key: 'food', label: 'อาหาร', icon: '🍽️' },
-        { key: 'drink', label: 'เครื่องดื่ม', icon: '🍺' },
-        { key: 'raw', label: 'วัตถุดิบ', icon: '🥩' },
+        { key: 'meat', label: 'เนื้อ / โปรตีน', icon: '🥩' },
+        { key: 'veg', label: 'ผัก / ของแห้ง', icon: '🥬' },
+        { key: 'pkg', label: 'บรรจุภัณฑ์', icon: '📦' },
         { key: 'all', label: 'ทั้งหมด', icon: '📋' },
     ]
 
@@ -107,8 +109,8 @@ export default function ProductsPage() {
                 borderBottom: '2px solid var(--border)',
             }}>
                 <div>
-                    <h1 className="page-title" style={{ fontSize: isMobile ? '1.2rem' : undefined }}>🏷️ จัดการสินค้า</h1>
-                    <p className="page-subtitle">ทั้งหมด <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{total}</span> รายการ</p>
+                    <h1 className="page-title" style={{ fontSize: isMobile ? '1.2rem' : undefined }}>🥩 วัตถุดิบ / คลังสต็อค</h1>
+                    <p className="page-subtitle">วัตถุดิบ เนื้อสัตว์ ผัก บรรจุภัณฑ์ — <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{total}</span> รายการ</p>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                     <div style={{ position: 'relative' }}>
@@ -154,7 +156,7 @@ export default function ProductsPage() {
                             </div>
                         )}
                     </div>
-                    <button onClick={() => { setEditProduct(null); setShowForm(true) }} className="btn-primary" style={{ minHeight: 44, whiteSpace: 'nowrap' }}>➕ เพิ่มสินค้า</button>
+                    <button onClick={() => { setEditProduct(null); setShowForm(true) }} className="btn-primary" style={{ minHeight: 44, whiteSpace: 'nowrap' }}>➕ เพิ่มวัตถุดิบ</button>
                 </div>
             </div>
 
@@ -395,7 +397,7 @@ function ProductModal({ product, categories, onClose, onSaved }: {
     const [form, setForm] = useState({
         sku: product?.sku || '', name: product?.name || '',
         categoryId: product?.category?.id || categories[0]?.id || '',
-        productType: product?.productType || 'SALE_ITEM',
+        productType: product?.productType || 'RAW_MATERIAL',
         unit: product?.unit || 'ขวด', unitAlt: product?.unitAlt || '',
         convFactor: product?.convFactor || 0,
         costPrice: product?.costPrice || 0, salePrice: product?.salePrice || 0,

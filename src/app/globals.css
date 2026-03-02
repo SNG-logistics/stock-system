@@ -57,10 +57,6 @@ body {
 
 /* === SIDEBAR === */
 /* Sidebar is now controlled via inline styles in Sidebar.tsx */
-/* Kept for backwards compat */
-.sidebar {
-  /* Dynamic width set via inline style */
-}
 
 .main-content {
   min-height: 100vh;
@@ -69,7 +65,9 @@ body {
 
 /* === ANIMATIONS === */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* === RESPONSIVE === */
@@ -101,7 +99,10 @@ body {
     padding: 1rem;
   }
 
-  .btn-primary, .btn-secondary, .btn-success, .btn-danger {
+  .btn-primary,
+  .btn-secondary,
+  .btn-success,
+  .btn-danger {
     min-height: 44px;
     padding: 0.5rem 0.875rem;
   }
@@ -203,39 +204,165 @@ tbody tr:hover td {
   color: #6B7280;
 }
 
-/* === BUTTONS === */
+/* === BUTTONS ============================================= */
+
+/* ── Base ── */
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.5rem 1.1rem;
   border-radius: 10px;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.875rem;
+  line-height: 1;
   transition: all 0.15s ease;
   cursor: pointer;
   border: none;
   font-family: inherit;
+  white-space: nowrap;
+  text-decoration: none;
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
+/* ── Sizes ── */
+.btn-sm {
+  padding: 0.35rem 0.85rem;
+  font-size: 0.78rem;
+  border-radius: 8px;
+}
+
+.btn-lg {
+  padding: 0.7rem 1.5rem;
+  font-size: 0.95rem;
+  border-radius: 12px;
+}
+
+.btn-icon {
+  padding: 0.45rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  flex-shrink: 0;
+}
+
+/* ── Solid variants ── */
 .btn-primary {
   background: var(--accent);
   color: #fff;
-  font-weight: 600;
   box-shadow: 0 2px 8px rgba(232, 54, 78, 0.25);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-dark);
-  box-shadow: 0 4px 16px rgba(232, 54, 78, 0.35);
+  box-shadow: 0 4px 16px rgba(232, 54, 78, 0.38);
   transform: translateY(-1px);
 }
 
+.btn-success {
+  background: #059669;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #047857;
+  box-shadow: 0 4px 16px rgba(5, 150, 105, 0.38);
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background: #DC2626;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.22);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #B91C1C;
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-purple {
+  background: #7C3AED;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+}
+
+.btn-purple:hover:not(:disabled) {
+  background: #6D28D9;
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.38);
+  transform: translateY(-1px);
+}
+
+.btn-blue {
+  background: #2563EB;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.22);
+}
+
+.btn-blue:hover:not(:disabled) {
+  background: #1D4ED8;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-orange {
+  background: #D97706;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.22);
+}
+
+.btn-orange:hover:not(:disabled) {
+  background: #B45309;
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.35);
+  transform: translateY(-1px);
+}
+
+/* ── Gradient variants (AI / special) ── */
+.btn-ai-green {
+  background: linear-gradient(135deg, #059669, #10B981);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(5, 150, 105, 0.3);
+}
+
+.btn-ai-green:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 4px 20px rgba(5, 150, 105, 0.42);
+  transform: translateY(-1px);
+}
+
+.btn-ai-purple {
+  background: linear-gradient(135deg, #7C3AED, #A78BFA);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(124, 58, 237, 0.3);
+}
+
+.btn-ai-purple:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.42);
+  transform: translateY(-1px);
+}
+
+.btn-ai-blue {
+  background: linear-gradient(135deg, #2563EB, #3B82F6);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-ai-blue:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.42);
+  transform: translateY(-1px);
+}
+
+/* ── Outline / Ghost variants ── */
 .btn-secondary {
   background: var(--white);
   color: var(--text);
@@ -247,26 +374,6 @@ tbody tr:hover td {
   border-color: #D1D5DB;
 }
 
-.btn-danger {
-  background: #DC2626;
-  color: #fff;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: #B91C1C;
-  transform: translateY(-1px);
-}
-
-.btn-success {
-  background: #059669;
-  color: #fff;
-}
-
-.btn-success:hover:not(:disabled) {
-  background: #047857;
-  transform: translateY(-1px);
-}
-
 .btn-outline {
   background: transparent;
   color: var(--accent);
@@ -276,6 +383,64 @@ tbody tr:hover td {
 .btn-outline:hover:not(:disabled) {
   background: var(--accent-bg);
 }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--bg);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* ── Tab button (active/inactive) ── */
+.btn-tab {
+  padding: 0.4rem 0.9rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-tab.active,
+.btn-tab:is([data-active="true"]) {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ── Close / icon utility ── */
+.btn-close {
+  background: var(--bg);
+  border: none;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.btn-close:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
 
 /* === INPUT / FORM === */
 .input {
@@ -362,7 +527,8 @@ tbody tr:hover td {
   display: flex;
   flex-direction: column;
 }
-.pos-layout-root > * {
+
+.pos-layout-root>* {
   flex: 1;
   min-height: 0;
 }

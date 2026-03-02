@@ -19,6 +19,30 @@ export const POST = withAuth<any>(async (req: NextRequest, { user }) => {
         if (!saleDateStr) return err('กรุณาระบุวันที่ขาย')
 
         const saleDate = new Date(saleDateStr)
+        const forceReimport = formData.get('forceReimport') === 'true'
+
+        // B-01 Fix: ป้องกัน Import ซ้ำวัน (Stock จะถูกตัดซ้ำ 2 เท่า!)
+        if (!forceReimport) {
+            const saleDateStart = new Date(saleDate)
+            saleDateStart.setHours(0, 0, 0, 0)
+            const saleDateEnd = new Date(saleDate)
+            saleDateEnd.setHours(23, 59, 59, 999)
+
+            const existingImport = await prisma.salesImport.findFirst({
+                where: {
+                    saleDate: { gte: saleDateStart, lte: saleDateEnd },
+                    status: { in: ['COMPLETED', 'PROCESSING'] },
+                },
+            })
+            if (existingImport) {
+                return err(
+                    `วันที่ ${saleDateStr} ถูก Import ไปแล้ว (ID: ${existingImport.id}, ` +
+                    `ไฟล์: ${existingImport.fileName}) — ` +
+                    `ถ้าต้องการ Import ซ้ำให้ส่ง forceReimport=true (ระวัง: Stock จะถูกตัดซ้ำ!)`
+                )
+            }
+        }
+
         const buffer = await file.arrayBuffer()
         const workbook = XLSX.read(buffer, { type: 'array' })
         const sheet = workbook.Sheets[workbook.SheetNames[0]]
@@ -105,6 +129,7 @@ export const POST = withAuth<any>(async (req: NextRequest, { user }) => {
         // ตัดสต็อคอัตโนมัติ
         let deducted = 0
         let unmatched = 0
+        const lowStockWarnings: { menuName: string; product: string; needed: number; had: number }[] = []  // B-05
 
         for (const item of salesImport.items) {
             // หา Recipe ที่ match ชื่อเมนูจาก POS
@@ -138,7 +163,13 @@ export const POST = withAuth<any>(async (req: NextRequest, { user }) => {
                         })
 
                         if (!inv || inv.quantity < deductQty) {
-                            // Stock ไม่พอ — บันทึกแต่ไม่ throw (เพื่อให้ทำต่อ)
+                            // B-05 Fix: บันทึก warning เพื่อแจ้ง user
+                            lowStockWarnings.push({
+                                menuName: item.menuName,
+                                product: bomItem.product.name,
+                                needed: deductQty,
+                                had: inv?.quantity || 0,
+                            })
                             console.warn(`Low stock: ${bomItem.product.name} need ${deductQty} have ${inv?.quantity || 0}`)
                         }
 
@@ -200,7 +231,14 @@ export const POST = withAuth<any>(async (req: NextRequest, { user }) => {
             totalAmount,
             deducted,
             unmatched,
-            message: `นำเข้าสำเร็จ ${saleItems.length} รายการ, ตัดสต็อค ${deducted} รายการ, ไม่พบ recipe ${unmatched} รายการ`
+            lowStockWarnings,  // B-05: แจ้ง UI ว่ามีสินค้าที่ stock ไม่พอ
+            hasWarnings: lowStockWarnings.length > 0,
+            message: [
+                `นำเข้าสำเร็จ ${saleItems.length} รายการ`,
+                `ตัดสต็อค ${deducted} รายการ`,
+                unmatched > 0 ? `ไม่พบ recipe ${unmatched} รายการ` : null,
+                lowStockWarnings.length > 0 ? `⚠️ สต็อคไม่พอ ${lowStockWarnings.length} รายการ (ตัดเป็น 0)` : null,
+            ].filter(Boolean).join(', ')
         })
 
     } catch (error) {

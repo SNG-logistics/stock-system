@@ -6,11 +6,12 @@ import { withAuth, ok } from '@/lib/api'
 export const GET = withAuth(async (req: NextRequest) => {
     const url = new URL(req.url)
     const dateStr = url.searchParams.get('date') || new Date().toISOString().split('T')[0]
-    const targetDate = new Date(dateStr)
-    const startOfDay = new Date(targetDate)
-    startOfDay.setHours(0, 0, 0, 0)
-    const endOfDay = new Date(targetDate)
-    endOfDay.setHours(23, 59, 59, 999)
+
+    // B-04 Fix: parse as LAO time (UTC+7) — avoid off-by-one day when server=UTC
+    // e.g. '2026-03-02' => 2026-03-02T00:00:00+07:00 in UTC = 2026-03-01T17:00:00Z
+    const [y, m, d] = dateStr.split('-').map(Number)
+    const startOfDay = new Date(Date.UTC(y, m - 1, d, 0 - 7, 0, 0, 0))   // midnight UTC+7
+    const endOfDay = new Date(Date.UTC(y, m - 1, d, 23 - 7, 59, 59, 999)) // 23:59 UTC+7
 
     const [
         posOrders,

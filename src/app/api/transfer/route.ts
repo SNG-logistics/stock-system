@@ -72,11 +72,22 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
                     data: { quantity: { decrement: item.quantity } },
                 })
 
-                // เพิ่มสต็อคคลังปลายทาง
+                // เพิ่มสต็อคคลังปลายทาง — B-03 Fix: merge WAC ถ้ามีสต็อคเดิม
                 const fromCost = fromInv.avgCost
+                const toInv = await tx.inventory.findUnique({
+                    where: { productId_locationId: { productId: item.productId, locationId: data.toLocationId } },
+                })
+                // คำนวณ WAC ใหม่ที่ Destination
+                const toQty = toInv?.quantity ?? 0
+                const toCost = toInv?.avgCost ?? 0
+                const newTotalQty = toQty + item.quantity
+                const mergedAvgCost = newTotalQty > 0
+                    ? (toQty * toCost + item.quantity * fromCost) / newTotalQty
+                    : fromCost
+
                 await tx.inventory.upsert({
                     where: { productId_locationId: { productId: item.productId, locationId: data.toLocationId } },
-                    update: { quantity: { increment: item.quantity } },
+                    update: { quantity: { increment: item.quantity }, avgCost: mergedAvgCost },
                     create: {
                         productId: item.productId,
                         locationId: data.toLocationId,
@@ -84,6 +95,7 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
                         avgCost: fromCost,
                     },
                 })
+
 
                 // Stock movement
                 await tx.stockMovement.create({

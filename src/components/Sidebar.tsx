@@ -7,13 +7,16 @@ const navItems = [
     { href: '/pos', icon: '💰', label: 'POS ขายหน้าร้าน', accent: true },
     { href: '/kitchen', icon: '🍳', label: 'จอครัว (KDS)', accent: true },
     { href: '/dashboard', icon: '🏠', label: 'Home' },
+    // ─── เมนูขาย (สิ่งที่ขายให้ลูกค้า) ───
+    { href: '/menu', icon: '🍽️', label: 'เมนูร้าน', dividerBefore: 'เมนู & สต็อค' },
+    { href: '/recipes', icon: '📋', label: 'สูตรอาหาร (BOM)' },
+    // ─── คลังสต็อค (วัตถุดิบ) ───
+    { href: '/products', icon: '🥩', label: 'วัตถุดิบ / Stock' },
     { href: '/inventory', icon: '📦', label: 'สต็อคคลัง' },
     { href: '/purchase', icon: '🛒', label: 'ซื้อเข้า / GR' },
     { href: '/transfer', icon: '🔄', label: 'เบิก / โอนคลัง' },
-    { href: '/sales-import', icon: '💾', label: 'นำเข้ายอดขาย' },
-    { href: '/products', icon: '🏷️', label: 'จัดการสินค้า' },
-    { href: '/recipes', icon: '📋', label: 'สูตรอาหาร (BOM)' },
     { href: '/adjustment', icon: '⚖️', label: 'ปรับสต็อค' },
+    { href: '/sales-import', icon: '💾', label: 'นำเข้ายอดขาย' },
     { href: '/reports', icon: '📈', label: 'Reports' },
     { href: '/ai-chat', icon: '🤖', label: 'AI Assistant' },
 ]
@@ -119,6 +122,7 @@ export default function Sidebar() {
                     {navItems.map(item => {
                         const active = pathname === item.href || pathname.startsWith(item.href + '/')
                         const isPOS = item.accent
+                        const divider = (item as { dividerBefore?: string }).dividerBefore
 
                         let bg = 'transparent'
                         let color = '#6B7280'
@@ -138,41 +142,54 @@ export default function Sidebar() {
                         }
 
                         return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                onClick={() => isMobile && setMobileOpen(false)}
-                                style={{
-                                    display: 'flex', alignItems: 'center',
-                                    gap: 10,
-                                    padding: collapsed && !isMobile ? '0.6rem' : '0.6rem 0.875rem',
-                                    borderRadius: 10,
-                                    fontSize: '0.875rem', fontWeight: active ? 600 : 400,
-                                    textDecoration: 'none',
-                                    transition: 'all 0.15s ease',
-                                    background: bg,
-                                    color: color,
-                                    boxShadow: shadow,
-                                    justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
-                                    minHeight: 40,
-                                }}
-                                onMouseEnter={e => {
-                                    if (!active) {
-                                        (e.currentTarget as HTMLElement).style.background = isPOS ? 'rgba(5,150,105,0.1)' : '#F3F4F6'
-                                        ;(e.currentTarget as HTMLElement).style.color = isPOS ? '#047857' : '#1A1D26'
-                                    }
-                                }}
-                                onMouseLeave={e => {
-                                    if (!active) {
-                                        (e.currentTarget as HTMLElement).style.background = isPOS ? 'rgba(5,150,105,0.06)' : 'transparent'
-                                        ;(e.currentTarget as HTMLElement).style.color = isPOS ? '#059669' : '#6B7280'
-                                    }
-                                }}
-                                title={collapsed && !isMobile ? item.label : undefined}
-                            >
-                                <span style={{ fontSize: '1rem', minWidth: 20, textAlign: 'center' }}>{item.icon}</span>
-                                {showLabels && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>}
-                            </Link>
+                            <div key={item.href}>
+                                {divider && showLabels && (
+                                    <div style={{
+                                        margin: '10px 0 4px', paddingLeft: '0.875rem',
+                                        fontSize: '0.6rem', fontWeight: 700,
+                                        color: '#D1D5DB', letterSpacing: '0.08em',
+                                        textTransform: 'uppercase',
+                                        borderTop: '1px solid #F3F4F6', paddingTop: 8,
+                                    }}>📂 {divider}</div>
+                                )}
+                                {divider && !showLabels && (
+                                    <div style={{ height: 1, background: '#F3F4F6', margin: '6px 4px' }} />
+                                )}
+                                <Link
+                                    href={item.href}
+                                    onClick={() => isMobile && setMobileOpen(false)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center',
+                                        gap: 10,
+                                        padding: collapsed && !isMobile ? '0.6rem' : '0.6rem 0.875rem',
+                                        borderRadius: 10,
+                                        fontSize: '0.875rem', fontWeight: active ? 600 : 400,
+                                        textDecoration: 'none',
+                                        transition: 'all 0.15s ease',
+                                        background: bg,
+                                        color: color,
+                                        boxShadow: shadow,
+                                        justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
+                                        minHeight: 40,
+                                    }}
+                                    onMouseEnter={e => {
+                                        if (!active) {
+                                            (e.currentTarget as HTMLElement).style.background = isPOS ? 'rgba(5,150,105,0.1)' : '#F3F4F6'
+                                                ; (e.currentTarget as HTMLElement).style.color = isPOS ? '#047857' : '#1A1D26'
+                                        }
+                                    }}
+                                    onMouseLeave={e => {
+                                        if (!active) {
+                                            (e.currentTarget as HTMLElement).style.background = isPOS ? 'rgba(5,150,105,0.06)' : 'transparent'
+                                                ; (e.currentTarget as HTMLElement).style.color = isPOS ? '#059669' : '#6B7280'
+                                        }
+                                    }}
+                                    title={collapsed && !isMobile ? item.label : undefined}
+                                >
+                                    <span style={{ fontSize: '1rem', minWidth: 20, textAlign: 'center' }}>{item.icon}</span>
+                                    {showLabels && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>}
+                                </Link>
+                            </div>
                         )
                     })}
 
@@ -210,13 +227,13 @@ export default function Sidebar() {
                                 onMouseEnter={e => {
                                     if (!active) {
                                         (e.currentTarget as HTMLElement).style.background = '#F0FDF4'
-                                        ;(e.currentTarget as HTMLElement).style.color = '#166534'
+                                            ; (e.currentTarget as HTMLElement).style.color = '#166534'
                                     }
                                 }}
                                 onMouseLeave={e => {
                                     if (!active) {
                                         (e.currentTarget as HTMLElement).style.background = 'transparent'
-                                        ;(e.currentTarget as HTMLElement).style.color = '#6B7280'
+                                            ; (e.currentTarget as HTMLElement).style.color = '#6B7280'
                                     }
                                 }}
                                 title={collapsed && !isMobile ? item.label : undefined}
@@ -266,11 +283,11 @@ export default function Sidebar() {
                         }}
                         onMouseEnter={e => {
                             (e.currentTarget as HTMLElement).style.color = '#DC2626'
-                            ;(e.currentTarget as HTMLElement).style.background = '#FEF2F2'
+                                ; (e.currentTarget as HTMLElement).style.background = '#FEF2F2'
                         }}
                         onMouseLeave={e => {
                             (e.currentTarget as HTMLElement).style.color = '#9CA3AF'
-                            ;(e.currentTarget as HTMLElement).style.background = 'transparent'
+                                ; (e.currentTarget as HTMLElement).style.background = 'transparent'
                         }}
                         title={collapsed && !isMobile ? 'Log out' : undefined}
                     >

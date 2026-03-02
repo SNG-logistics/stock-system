@@ -694,7 +694,6 @@ export default function PurchasePage() {
                 />
             )}
 
-            {/* ── Header ── */}
             <div className="page-header">
                 <div>
                     <h1 className="page-title">🛒 ซื้อเข้า / รับสินค้า (GR)</h1>
@@ -703,39 +702,17 @@ export default function PurchasePage() {
                 <div style={{ display: 'flex', gap: 8 }}>
                     {tab === 'new' && (
                         <>
-                            <button onClick={() => setShowStockSheet(true)} style={{
-                                padding: '0.45rem 1.1rem', borderRadius: 10, fontFamily: 'inherit',
-                                fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
-                                border: 'none',
-                                background: 'linear-gradient(135deg, #059669, #10B981)',
-                                color: '#fff',
-                                boxShadow: '0 2px 12px rgba(5,150,105,0.3)',
-                                display: 'flex', alignItems: 'center', gap: 6,
-                            }}>
+                            <button onClick={() => setShowStockSheet(true)} className="btn btn-ai-green">
                                 📋 AI อ่านใบสต็อค
                             </button>
-                            <button onClick={() => setShowScanner(true)} style={{
-                                padding: '0.45rem 1.1rem', borderRadius: 10, fontFamily: 'inherit',
-                                fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
-                                border: 'none',
-                                background: 'linear-gradient(135deg, #7C3AED, #A78BFA)',
-                                color: '#fff',
-                                boxShadow: '0 2px 12px rgba(124,58,237,0.3)',
-                                display: 'flex', alignItems: 'center', gap: 6,
-                            }}>
+                            <button onClick={() => setShowScanner(true)} className="btn btn-ai-purple">
                                 📷 AI อ่านบิล
                             </button>
                         </>
                     )}
                     {(['new', 'history'] as const).map(t => (
-                        <button key={t} onClick={() => setTab(t)} style={{
-                            padding: '0.45rem 1.2rem', borderRadius: 10, fontFamily: 'inherit',
-                            fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
-                            border: tab === t ? 'none' : '1px solid var(--border)',
-                            background: tab === t ? 'var(--accent)' : 'var(--white)',
-                            color: tab === t ? '#fff' : 'var(--text-muted)',
-                            transition: 'all 0.18s',
-                        }}>
+                        <button key={t} onClick={() => setTab(t)}
+                            className={`btn btn-tab${tab === t ? ' active' : ''}`}>
                             {t === 'new' ? '➕ สร้างใหม่' : '📋 ประวัติ'}
                         </button>
                     ))}
@@ -764,23 +741,13 @@ export default function PurchasePage() {
                             {items.length > 0 && <span style={{ marginLeft: 8, color: 'var(--accent)', fontWeight: 800 }}>{items.length} รายการ</span>}
                         </h3>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            <button onClick={() => setShowStockGrid(true)} style={{
-                                padding: '0.35rem 0.85rem', borderRadius: 8, fontFamily: 'inherit',
-                                fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
-                                border: 'none', background: 'linear-gradient(135deg,#059669,#10B981)',
-                                color: '#fff', display: 'flex', alignItems: 'center', gap: 4,
-                            }}>
+                            <button onClick={() => setShowStockGrid(true)} className="btn btn-ai-green btn-sm">
                                 📋 กรอกใบสต็อค
                             </button>
-                            <button onClick={() => setShowScanner(true)} style={{
-                                padding: '0.35rem 0.85rem', borderRadius: 8, fontFamily: 'inherit',
-                                fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
-                                border: 'none', background: 'linear-gradient(135deg, #7C3AED, #A78BFA)',
-                                color: '#fff', display: 'flex', alignItems: 'center', gap: 4,
-                            }}>
+                            <button onClick={() => setShowScanner(true)} className="btn btn-ai-purple btn-sm">
                                 📷 AI อ่านบิล
                             </button>
-                            <button onClick={addItem} className="btn-outline" style={{ fontSize: '0.8rem', padding: '0.35rem 0.9rem' }}>➕ เพิ่มรายการ</button>
+                            <button onClick={addItem} className="btn btn-outline btn-sm">➕ เพิ่มรายการ</button>
                         </div>
                     </div>
 

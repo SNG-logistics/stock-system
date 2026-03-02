@@ -73,6 +73,8 @@ export default function POSPage() {
     const [proteinPendingProduct, setProteinPendingProduct] = useState<Product | null>(null)
     const [sentItems, setSentItems] = useState<{ kitchen: OrderItemData[], bar: OrderItemData[], orderId: string, tableCode: string } | null>(null)
     const [authChecked, setAuthChecked] = useState(false)
+    const [selectedZone, setSelectedZone] = useState<string>('ALL')  // Zone tab
+    const [orderStartTime, setOrderStartTime] = useState<Date | null>(null)  // เวลาเริ่มออเดอร์
     const searchRef = useRef<HTMLInputElement>(null)
 
     // ─── Auth Check ───────────────────────────────────────────
@@ -178,6 +180,8 @@ export default function POSPage() {
                     setOrderItems(json.data.items.filter((i: OrderItemData) => !i.isCancelled))
                     setDiscount(json.data.discount)
                     setDiscountType(json.data.discountType)
+                    // เวลาเริ่มออเดอร์เดิม
+                    setOrderStartTime(json.data.createdAt ? new Date(json.data.createdAt) : new Date())
                 } else {
                     setToast({ message: json.error || 'ไม่สามารถโหลดออเดอร์ได้', type: 'error' })
                 }
@@ -190,6 +194,7 @@ export default function POSPage() {
             setOrderItems([])
             setDiscount(0)
             setDiscountType('AMOUNT')
+            setOrderStartTime(new Date())  // เริ่มจับเวลาใหม่
         }
     }
 
@@ -474,6 +479,7 @@ export default function POSPage() {
         setDiscountType('AMOUNT')
         setPaymentMethod('CASH')
         setReceivedAmount('')
+        setOrderStartTime(null)
         setShowTableModal(true)
         fetchTables()
     }
@@ -518,113 +524,192 @@ export default function POSPage() {
             if (!tablesByZone[t.zone]) tablesByZone[t.zone] = []
             tablesByZone[t.zone].push(t)
         })
+        const zones = Object.keys(tablesByZone)
+        const displayTables = selectedZone === 'ALL'
+            ? tables
+            : (tablesByZone[selectedZone] || [])
+
+        // Stats
+        const occupiedCount = tables.filter(t => t.orders && t.orders.length > 0).length
+        const availableCount = tables.filter(t => !(t.orders && t.orders.length > 0)).length
+
+        // Helper: elapsed time label
+        const elapsedLabel = (t: DiningTable) => {
+            if (!t.orders || t.orders.length === 0) return null
+            const order = t.orders[0] as Order & { createdAt?: string }
+            if (!order.createdAt) return null
+            const mins = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000)
+            if (mins < 60) return `${mins} นาที`
+            return `${Math.floor(mins / 60)}ชม. ${mins % 60}น.`
+        }
 
         return (
-            <div style={{ minHeight: '100%', background: '#F8F9FC', overflowY: 'auto', padding: isMobile ? '1rem' : '2rem' }}>
+            <div style={{ minHeight: '100%', background: '#F8F9FC', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-                {/* Header */}
+
+                {/* ─── Top Bar ─── */}
                 <div style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'space-between',
-                    gap: '1rem',
-                    marginBottom: '1.25rem',
-                    paddingBottom: '1rem',
-                    borderBottom: '2px solid #E5E7EB',
+                    background: '#1A1D26', color: '#fff',
+                    padding: isMobile ? '0.7rem 1rem' : '0.85rem 1.5rem',
+                    display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
                 }}>
-                    <div>
-                        <h1 className="page-title">🍽️ เลือกโต๊ะ</h1>
-                        <p style={{ color: '#9CA3AF', fontSize: '0.85rem', marginTop: 4 }}>เลือกโต๊ะเพื่อเริ่มออเดอร์</p>
-                    </div>
-                    <a href="/dashboard" style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '0.5rem 1rem',
-                        background: '#FFFFFF',
-                        border: '1px solid #E5E7EB',
-                        borderRadius: 10,
-                        color: '#1A1D26',
-                        textDecoration: 'none',
-                        fontSize: '0.875rem',
-                        fontWeight: 500,
-                        transition: 'all 0.15s ease',
-                        minHeight: 44,
-                    }}>
-                        ← กลับหน้าหลัก
-                    </a>
-                </div>
-
-                {/* Tables by zone */}
-                {Object.entries(tablesByZone).map(([zone, zoneTables]) => (
-                    <div key={zone} style={{ marginBottom: '1.5rem' }}>
-                        <h2 style={{
-                            color: '#6B7280',
-                            fontSize: '0.82rem',
-                            fontWeight: 600,
-                            marginBottom: '0.75rem',
-                            letterSpacing: '0.05em',
-                            textTransform: 'uppercase',
-                        }}>
-                            📍 {zone}
-                        </h2>
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))',
-                            gap: '0.75rem',
-                        }}>
-                            {zoneTables.map(table => {
-                                const hasOrder = table.orders && table.orders.length > 0
-                                const isAvailable = table.status === 'AVAILABLE'
-                                const borderColor = hasOrder ? '#E8364E' : isAvailable ? '#22C55E' : '#D97706'
-                                const statusText = hasOrder ? '🔴 มีออเดอร์' : isAvailable ? '🟢 ว่าง' : '🟡 จอง'
-                                const statusBg = hasOrder ? '#FEF2F2' : isAvailable ? '#ECFDF5' : '#FFFBEB'
-
-                                return (
-                                    <button
-                                        key={table.id}
-                                        onClick={() => selectTable(table)}
-                                        style={{
-                                            background: '#FFFFFF',
-                                            border: `2px solid ${borderColor}`,
-                                            borderRadius: 14,
-                                            padding: isMobile ? '0.75rem 0.5rem' : '1rem',
-                                            cursor: 'pointer',
-                                            textAlign: 'center',
-                                            transition: 'all 0.15s ease',
-                                            color: '#1A1D26',
-                                            fontFamily: 'inherit',
-                                            minHeight: 48,
-                                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                                        }}
-                                        onMouseEnter={e => {
-                                            (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
-                                                ; (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 16px ${borderColor}25`
-                                        }}
-                                        onMouseLeave={e => {
-                                            (e.currentTarget as HTMLElement).style.transform = 'none'
-                                                ; (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 2px rgba(0,0,0,0.04)'
-                                        }}
-                                    >
-                                        <div style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', marginBottom: 4 }}>🪑</div>
-                                        <div style={{ fontWeight: 700, fontSize: isMobile ? '0.85rem' : '1rem', color: '#1A1D26' }}>{table.name}</div>
-                                        <div style={{ fontSize: '0.65rem', color: '#9CA3AF', marginTop: 2 }}>{table.seats} ที่นั่ง</div>
-                                        <div style={{
-                                            fontSize: '0.6rem',
-                                            marginTop: 6,
-                                            color: borderColor,
-                                            fontWeight: 600,
-                                            background: statusBg,
-                                            borderRadius: 9999,
-                                            padding: '2px 8px',
-                                            display: 'inline-block',
-                                        }}>{statusText}</div>
-                                    </button>
-                                )
-                            })}
+                    <div style={{ fontSize: '1.4rem' }}>🍽️</div>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 800, fontSize: '1rem', letterSpacing: '-0.01em' }}>43 Garden POS</div>
+                        <div style={{ fontSize: '0.68rem', color: '#9CA3AF', marginTop: 1 }}>
+                            โต๊ะว่าง <span style={{ color: '#4ADE80', fontWeight: 700 }}>{availableCount}</span>
+                            &nbsp;•&nbsp; มีออเดอร์ <span style={{ color: '#FB7185', fontWeight: 700 }}>{occupiedCount}</span>
                         </div>
                     </div>
-                ))}
+                    <a href="/dashboard" style={{
+                        fontSize: '0.8rem', color: '#9CA3AF', textDecoration: 'none',
+                        padding: '6px 14px', borderRadius: 8, border: '1px solid #374151',
+                        display: 'flex', alignItems: 'center', gap: 4,
+                    }}>← Back</a>
+                </div>
+
+                {/* ─── Zone Tabs ─── */}
+                <div style={{
+                    background: '#FFFFFF', borderBottom: '1px solid #E5E7EB',
+                    padding: '0 0.75rem', display: 'flex', gap: 2, overflowX: 'auto',
+                    scrollbarWidth: 'none', flexShrink: 0,
+                }}>
+                    {/* ALL tab */}
+                    {['ALL', ...zones].map(zone => {
+                        const isActive = selectedZone === zone
+                        const zoneTbl = zone === 'ALL' ? tables : (tablesByZone[zone] || [])
+                        const hasOccupied = zoneTbl.some(t => t.orders && t.orders.length > 0)
+                        return (
+                            <button key={zone} onClick={() => setSelectedZone(zone)} style={{
+                                padding: '0.7rem 1.1rem', border: 'none', background: 'transparent',
+                                fontFamily: 'inherit', cursor: 'pointer', fontWeight: isActive ? 700 : 500,
+                                fontSize: '0.82rem', whiteSpace: 'nowrap', position: 'relative',
+                                color: isActive ? '#E8364E' : '#6B7280',
+                                borderBottom: isActive ? '2.5px solid #E8364E' : '2.5px solid transparent',
+                                transition: 'all 0.15s',
+                            }}>
+                                {zone === 'ALL' ? '📋 ทั้งหมด' : `📍 ${zone}`}
+                                {hasOccupied && zone !== 'ALL' && (
+                                    <span style={{
+                                        position: 'absolute', top: 8, right: 6,
+                                        width: 7, height: 7, borderRadius: '50%',
+                                        background: '#E8364E',
+                                    }} />
+                                )}
+                            </button>
+                        )
+                    })}
+                </div>
+
+                {/* ─── Table Grid ─── */}
+                <div style={{
+                    flex: 1, overflowY: 'auto',
+                    padding: isMobile ? '0.75rem' : '1rem 1.25rem',
+                    display: 'grid',
+                    gridTemplateColumns: isMobile
+                        ? 'repeat(2, 1fr)'
+                        : 'repeat(auto-fill, minmax(180px, 1fr))',
+                    gap: '0.75rem',
+                    alignContent: 'start',
+                }}>
+                    {displayTables.map(table => {
+                        const hasOrder = table.orders && table.orders.length > 0
+                        const elapsed = elapsedLabel(table)
+                        const order = (table.orders && table.orders.length > 0) ? table.orders[0] : null
+                        const orderTotal = order ? (order as Order).totalAmount : 0
+
+                        const bg = hasOrder ? '#1A1D26' : '#FFFFFF'
+                        const border = hasOrder ? '#374151' : '#E5E7EB'
+                        const textColor = hasOrder ? '#FFFFFF' : '#1A1D26'
+                        const subColor = hasOrder ? '#9CA3AF' : '#6B7280'
+
+                        return (
+                            <button key={table.id} onClick={() => selectTable(table)} style={{
+                                background: bg, border: `2px solid ${border}`,
+                                borderRadius: 16, padding: '1rem 0.9rem',
+                                cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                                color: textColor, transition: 'all 0.18s ease',
+                                boxShadow: hasOrder ? '0 4px 20px rgba(0,0,0,0.18)' : '0 1px 4px rgba(0,0,0,0.06)',
+                                display: 'flex', flexDirection: 'column', gap: 6,
+                                minHeight: isMobile ? 100 : 120,
+                            }}
+                                onMouseEnter={e => {
+                                    (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'
+                                        ; (e.currentTarget as HTMLElement).style.boxShadow = hasOrder
+                                            ? '0 8px 28px rgba(0,0,0,0.28)'
+                                            : '0 4px 16px rgba(0,0,0,0.10)'
+                                }}
+                                onMouseLeave={e => {
+                                    (e.currentTarget as HTMLElement).style.transform = 'none'
+                                        ; (e.currentTarget as HTMLElement).style.boxShadow = hasOrder
+                                            ? '0 4px 20px rgba(0,0,0,0.18)'
+                                            : '0 1px 4px rgba(0,0,0,0.06)'
+                                }}
+                            >
+                                {/* Top row: table name + status dot */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ fontWeight: 800, fontSize: isMobile ? '0.85rem' : '1rem' }}>
+                                        {table.name}
+                                    </div>
+                                    <div style={{
+                                        width: 10, height: 10, borderRadius: '50%',
+                                        background: hasOrder ? '#FB7185' : '#4ADE80',
+                                        boxShadow: hasOrder ? '0 0 6px rgba(251,113,133,0.7)' : '0 0 6px rgba(74,222,128,0.7)',
+                                    }} />
+                                </div>
+
+                                {/* Zone chip */}
+                                <div style={{
+                                    fontSize: '0.62rem', fontWeight: 600,
+                                    color: hasOrder ? '#6B7280' : '#9CA3AF',
+                                }}>
+                                    📍 {table.zone} &nbsp;•&nbsp; {table.seats} ที่นั่ง
+                                </div>
+
+                                <div style={{ marginTop: 'auto' }}>
+                                    {hasOrder ? (
+                                        <>
+                                            {/* Timer */}
+                                            {elapsed && (
+                                                <div style={{
+                                                    fontSize: '0.7rem', color: '#FCD34D', fontWeight: 700,
+                                                    display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4,
+                                                }}>
+                                                    ⏱️ {elapsed}
+                                                </div>
+                                            )}
+                                            {/* Total */}
+                                            {orderTotal > 0 && (
+                                                <div style={{
+                                                    fontSize: isMobile ? '0.85rem' : '0.95rem', fontWeight: 800,
+                                                    color: '#4ADE80',
+                                                }}>
+                                                    {formatLAK(orderTotal)}
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div style={{
+                                            fontSize: '0.68rem', color: '#4ADE80', fontWeight: 600,
+                                            background: 'rgba(74,222,128,0.1)', borderRadius: 6,
+                                            padding: '3px 8px', display: 'inline-block',
+                                        }}>
+                                            🟢 ว่าง
+                                        </div>
+                                    )}
+                                </div>
+                            </button>
+                        )
+                    })}
+
+                    {displayTables.length === 0 && (
+                        <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: '#9CA3AF' }}>
+                            <div style={{ fontSize: '2rem', marginBottom: 8 }}>🪑</div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>ไม่มีโต๊ะในโซนนี้</div>
+                        </div>
+                    )}
+                </div>
             </div>
         )
     }
@@ -995,49 +1080,59 @@ export default function POSPage() {
                     borderLeft: isMobile ? 'none' : '1px solid #E5E7EB',
                     boxShadow: isMobile ? 'none' : '-1px 0 4px rgba(0,0,0,0.03)',
                 }}>
-                    {/* Table header */}
+                    {/* ─── Right Panel Header (Deltafood style) ─── */}
                     <div style={{
-                        padding: '0.7rem 0.85rem',
-                        borderBottom: '1px solid #E5E7EB',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
+                        background: '#1A1D26',
+                        padding: '0.7rem 0.9rem',
                         flexShrink: 0,
-                        background: '#FFFFFF',
                     }}>
-                        <div style={{
-                            padding: '4px 10px',
-                            background: '#FFF0F2',
-                            borderRadius: 8,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 14, color: '#E8364E', fontWeight: 600,
-                        }}>🪑</div>
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1A1D26' }}>
-                                {selectedTable?.name || 'ไม่ได้เลือกโต๊ะ'}
+                        {/* Row 1: Table name + Order# */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{
+                                    width: 28, height: 28, borderRadius: 8,
+                                    background: '#E8364E', display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', fontSize: '0.8rem',
+                                }}>🪑</div>
+                                <div>
+                                    <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#FFFFFF' }}>
+                                        {selectedTable?.name || 'ไม่ได้เลือกโต๊ะ'}
+                                    </div>
+                                    {currentOrder && (
+                                        <div style={{ fontSize: '0.62rem', color: '#6B7280' }}>#{currentOrder.orderNumber}</div>
+                                    )}
+                                </div>
                             </div>
-                            {currentOrder && (
-                                <div style={{ fontSize: '0.65rem', color: '#9CA3AF' }}>#{currentOrder.orderNumber}</div>
-                            )}
+                            <span style={{
+                                fontSize: '0.68rem', color: '#9CA3AF',
+                                background: '#374151', padding: '3px 9px',
+                                borderRadius: 9999, fontWeight: 500,
+                            }}>
+                                {orderItems.length} รายการ
+                            </span>
                         </div>
-                        <span style={{
-                            fontSize: '0.7rem',
-                            color: '#6B7280',
-                            background: '#F3F4F6',
-                            padding: '3px 8px',
-                            borderRadius: 9999,
-                            fontWeight: 500,
+
+                        {/* Row 2: Time + Net Total */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            background: '#111827', borderRadius: 10, padding: '6px 10px',
                         }}>
-                            {orderItems.length} รายการ
-                        </span>
-                        <button onClick={() => alert('AI Bill Reading Feature - Implementation Pending')} style={{
-                            padding: '4px 10px',
-                            background: '#FFF0F2',
-                            borderRadius: 8,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 14, color: '#E8364E', fontWeight: 600,
-                        }}>AI อ่านบิล</button>
-                        {/* TODO: Antigravity integrate AI OCR API here, and format the AI response */}
+                            <div style={{ fontSize: '0.7rem', color: '#9CA3AF' }}>
+                                {orderStartTime ? (
+                                    <>
+                                        ⏱️ เริ่ม{' '}
+                                        <span style={{ color: '#FCD34D', fontWeight: 700 }}>
+                                            {orderStartTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span>— ยังไม่มีตั้งออเดอร์</span>
+                                )}
+                            </div>
+                            <div style={{ fontWeight: 900, fontSize: '1.05rem', color: '#4ADE80', letterSpacing: '-0.02em' }}>
+                                {formatLAK(totalAmount)}
+                            </div>
+                        </div>
                     </div>
 
                     {/* Order Items List */}
@@ -1212,45 +1307,84 @@ export default function POSPage() {
                         </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div style={{ padding: '0.65rem', display: 'flex', gap: 8, flexShrink: 0, background: '#FFFFFF' }}>
-                        <button onClick={cancelOrder} disabled={orderItems.length === 0}
-                            style={{
-                                flex: 1, padding: '0.65rem', borderRadius: 10,
-                                border: '1px solid #E5E7EB', background: '#FFFFFF',
-                                color: '#6B7280', cursor: 'pointer', fontSize: '0.82rem',
-                                fontWeight: 600, fontFamily: 'inherit',
-                                opacity: orderItems.length === 0 ? 0.5 : 1, minHeight: 44,
-                                transition: 'all 0.15s ease',
-                            }}
-                        >
-                            ❌ ยกเลิก
-                        </button>
-                        <button onClick={confirmAndSaveOrder} disabled={orderItems.length === 0 || loading}
-                            style={{
-                                flex: 1, padding: '0.65rem', borderRadius: 10, border: 'none',
-                                background: '#2563EB', color: '#fff', cursor: 'pointer',
-                                fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit',
-                                opacity: orderItems.length === 0 ? 0.5 : 1, minHeight: 44,
-                                boxShadow: '0 2px 8px rgba(37,99,235,0.25)',
-                                transition: 'all 0.15s ease',
-                            }}
-                        >
-                            ✅ ยืนยัน
-                        </button>
-                        <button onClick={closeBill} disabled={orderItems.length === 0}
-                            style={{
-                                flex: 1.5, padding: '0.65rem', borderRadius: 10, border: 'none',
-                                background: 'linear-gradient(135deg, #E8364E, #FF6B81)',
-                                color: '#fff', cursor: 'pointer',
-                                fontSize: '0.88rem', fontWeight: 700, fontFamily: 'inherit',
-                                boxShadow: '0 4px 16px rgba(232,54,78,0.3)',
-                                opacity: orderItems.length === 0 ? 0.5 : 1, minHeight: 44,
-                                transition: 'all 0.15s ease',
-                            }}
-                        >
-                            💰 ปิดบิล
-                        </button>
+                    {/* ─── 6 Action Buttons (Deltafood style) ─── */}
+                    <div style={{
+                        padding: '0.5rem',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(6, 1fr)',
+                        gap: 5,
+                        flexShrink: 0,
+                        background: '#F8F9FC',
+                        borderTop: '1px solid #E5E7EB',
+                    }}>
+                        {([
+                            {
+                                label: 'เพิ่ม', icon: '➕', bg: '#059669', shadow: 'rgba(5,150,105,0.35)',
+                                onClick: () => {
+                                    // สู่หน้าเมนู (เลื่อนไปยัง /menu หรือ focus search)
+                                    if (searchRef.current) { searchRef.current.focus() }
+                                },
+                                disabled: false,
+                            },
+                            {
+                                label: 'ยกเลิก', icon: '✕', bg: '#DC2626', shadow: 'rgba(220,38,38,0.35)',
+                                onClick: cancelOrder,
+                                disabled: orderItems.length === 0,
+                            },
+                            {
+                                label: 'ย้าย', icon: '⇄', bg: '#7C3AED', shadow: 'rgba(124,58,237,0.35)',
+                                onClick: () => setToast({ message: 'ฟังก์ชันย้ายโต๊ะ - Coming Soon', type: 'warning' }),
+                                disabled: !selectedTable,
+                            },
+                            {
+                                label: 'สถานะ', icon: '✓', bg: '#0EA5E9', shadow: 'rgba(14,165,233,0.35)',
+                                onClick: confirmAndSaveOrder,
+                                disabled: orderItems.length === 0 || loading,
+                            },
+                            {
+                                label: 'ใบบิล', icon: '🧾', bg: '#D97706', shadow: 'rgba(217,119,6,0.35)',
+                                onClick: () => setShowReceiptPreview(true),
+                                disabled: orderItems.length === 0,
+                            },
+                            {
+                                label: 'เช็คบิล', icon: '💰', bg: 'linear-gradient(135deg,#059669,#10B981)', shadow: 'rgba(5,150,105,0.4)',
+                                onClick: closeBill,
+                                disabled: orderItems.length === 0,
+                            },
+                        ] as { label: string; icon: string; bg: string; shadow: string; onClick: () => void; disabled: boolean }[]).map(btn => (
+                            <button
+                                key={btn.label}
+                                onClick={btn.onClick}
+                                disabled={btn.disabled}
+                                style={{
+                                    display: 'flex', flexDirection: 'column',
+                                    alignItems: 'center', justifyContent: 'center',
+                                    gap: 2, padding: '0.45rem 0.2rem',
+                                    borderRadius: 10, border: 'none',
+                                    background: btn.disabled ? '#E5E7EB' : btn.bg,
+                                    color: btn.disabled ? '#9CA3AF' : '#FFFFFF',
+                                    cursor: btn.disabled ? 'not-allowed' : 'pointer',
+                                    fontSize: '0.78rem', fontFamily: 'inherit',
+                                    fontWeight: 700, minHeight: 52,
+                                    boxShadow: btn.disabled ? 'none' : `0 3px 10px ${btn.shadow}`,
+                                    transition: 'all 0.15s ease',
+                                    opacity: btn.disabled ? 0.5 : 1,
+                                }}
+                                onMouseEnter={e => {
+                                    if (!btn.disabled) {
+                                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
+                                            ; (e.currentTarget as HTMLElement).style.filter = 'brightness(1.1)'
+                                    }
+                                }}
+                                onMouseLeave={e => {
+                                    (e.currentTarget as HTMLElement).style.transform = 'none'
+                                        ; (e.currentTarget as HTMLElement).style.filter = 'none'
+                                }}
+                            >
+                                <span style={{ fontSize: '1rem', lineHeight: 1 }}>{btn.icon}</span>
+                                <span style={{ fontSize: '0.62rem', letterSpacing: '-0.01em' }}>{btn.label}</span>
+                            </button>
+                        ))}
                     </div>
                 </div>
             )}
