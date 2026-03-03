@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
@@ -7,6 +7,14 @@ export default function LoginPage() {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [form, setForm] = useState({ username: '', password: '' })
+    const [isMobile, setIsMobile] = useState(false)
+
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth < 768)
+        check()
+        window.addEventListener('resize', check)
+        return () => window.removeEventListener('resize', check)
+    }, [])
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
@@ -31,91 +39,120 @@ export default function LoginPage() {
         }
     }
 
+    const inputStyle: React.CSSProperties = {
+        width: '100%', padding: '0.75rem 1rem',
+        background: 'white', border: '1.5px solid #E5E7EB',
+        borderRadius: 12, color: '#111827',
+        fontSize: '1rem', outline: 'none',
+        fontFamily: 'inherit', transition: 'all 0.2s',
+        boxSizing: 'border-box', minHeight: 48,
+    }
+
     return (
         <div style={{
             minHeight: '100vh',
             display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
             background: '#F8F9FA',
             fontFamily: "'Noto Sans Thai', 'Noto Sans Lao', sans-serif",
         }}>
-            {/* Left panel — brand */}
+            {/* Brand panel */}
             <div style={{
-                width: '45%', display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
+                width: isMobile ? '100%' : '45%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
                 background: 'linear-gradient(160deg, #E8162A 0%, #9B1020 100%)',
-                padding: '3rem',
-                position: 'relative', overflow: 'hidden',
+                padding: isMobile ? '1.25rem 1.5rem' : '3rem',
+                position: 'relative',
+                overflow: 'hidden',
+                flexShrink: 0,
+                minHeight: isMobile ? 0 : undefined,
             }}>
                 {/* Decorative circles */}
                 <div style={{ position: 'absolute', top: -80, right: -80, width: 240, height: 240, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
                 <div style={{ position: 'absolute', bottom: -60, left: -60, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
-                <div style={{ position: 'absolute', top: '40%', right: -40, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
 
-                <div style={{ position: 'relative', textAlign: 'center' }}>
-                    <div style={{
-                        width: 90, height: 90, borderRadius: 24,
-                        background: 'rgba(255,255,255,0.15)',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255,255,255,0.25)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        margin: '0 auto 1.5rem', fontSize: 42,
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-                    }}>
-                        🍽️
+                {isMobile ? (
+                    /* ── Mobile compact header ── */
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 14, width: '100%', maxWidth: 400 }}>
+                        <div style={{
+                            width: 56, height: 56, borderRadius: 16, flexShrink: 0,
+                            background: 'rgba(255,255,255,0.18)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 28,
+                        }}>🍽️</div>
+                        <div>
+                            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white', letterSpacing: '-0.02em', margin: 0 }}>43 Garden</h1>
+                            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.68rem', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
+                                Stock Management System
+                            </p>
+                        </div>
                     </div>
+                ) : (
+                    /* ── Desktop full brand panel ── */
+                    <div style={{ position: 'relative', textAlign: 'center' }}>
+                        <div style={{
+                            width: 90, height: 90, borderRadius: 24,
+                            background: 'rgba(255,255,255,0.15)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.25)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            margin: '0 auto 1.5rem', fontSize: 42,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                        }}>🍽️</div>
 
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white', marginBottom: 8, letterSpacing: '-0.02em' }}>
-                        43 Garden
-                    </h1>
-                    <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '1.5rem' }}>
-                        Stock Management System
-                    </p>
+                        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white', marginBottom: 8, letterSpacing: '-0.02em' }}>
+                            43 Garden
+                        </h1>
+                        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '1.5rem' }}>
+                            Stock Management System
+                        </p>
 
-                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '1.5rem', marginBottom: '2rem' }}>
-                        <p style={{ color: 'white', fontSize: '1.35rem', fontWeight: 700, lineHeight: 1.5, marginBottom: 6 }}>
-                            รู้ต้นทุนทุกจาน
-                        </p>
-                        <p style={{ color: 'white', fontSize: '1.35rem', fontWeight: 700, lineHeight: 1.5, marginBottom: 12 }}>
-                            รู้กำไรทุกวัน
-                        </p>
-                        <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.8rem', lineHeight: 1.7 }}>
-                            ระบบจัดการสต็อคที่ออกแบบมาสำหรับ
-                            ร้านอาหารที่อยากเติบโตอย่างมั่นคง
+                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '1.5rem', marginBottom: '2rem' }}>
+                            <p style={{ color: 'white', fontSize: '1.35rem', fontWeight: 700, lineHeight: 1.5, marginBottom: 6 }}>รู้ต้นทุนทุกจาน</p>
+                            <p style={{ color: 'white', fontSize: '1.35rem', fontWeight: 700, lineHeight: 1.5, marginBottom: 12 }}>รู้กำไรทุกวัน</p>
+                            <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.8rem', lineHeight: 1.7 }}>
+                                ระบบจัดการสต็อคที่ออกแบบมาสำหรับ<br />ร้านอาหารที่อยากเติบโตอย่างมั่นคง
+                            </p>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
+                            {[
+                                { icon: '📉', text: 'ลดของเสีย ลดต้นทุนซื้อ' },
+                                { icon: '⚡', text: 'ตัดสต็อคอัตโนมัติจาก POS ทุกออเดอร์' },
+                                { icon: '📊', text: 'รายงานต้นทุน-กำไรรายวัน รายเดือน' },
+                                { icon: '🤖', text: 'AI ช่วยวางสูตรและคำนวณ BOM' },
+                            ].map(f => (
+                                <div key={f.icon} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'rgba(255,255,255,0.85)', fontSize: '0.875rem' }}>
+                                    <span style={{ fontSize: '1.1rem' }}>{f.icon}</span>
+                                    <span>{f.text}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <p style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+                            43 Garden Cafe &amp; Restaurant · Vientiane, Lao PDR
                         </p>
                     </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
-                        {[
-                            { icon: '📉', text: 'ลดของเสีย ลดต้นทุนซื้อ' },
-                            { icon: '⚡', text: 'ตัดสต็อคอัตโนมัติจาก POS ทุกออเดอร์' },
-                            { icon: '📊', text: 'รายงานต้นทุน-กำไรรายวัน รายเดือน' },
-                            { icon: '🤖', text: 'AI ช่วยวางสูตรและคำนวณ BOM' },
-                        ].map(f => (
-                            <div key={f.icon} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'rgba(255,255,255,0.85)', fontSize: '0.875rem' }}>
-                                <span style={{ fontSize: '1.1rem' }}>{f.icon}</span>
-                                <span>{f.text}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <p style={{ position: 'absolute', bottom: 24, color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>
-                    43 Garden Cafe & Restaurant · Vientiane, Lao PDR
-                </p>
+                )}
             </div>
 
-            {/* Right panel — form */}
+            {/* Form panel */}
             <div style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '2rem',
+                padding: isMobile ? '1.5rem 1.25rem' : '2rem',
             }}>
                 <div style={{ width: '100%', maxWidth: 400 }}>
-                    <div style={{ marginBottom: '2rem' }}>
-                        <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#111827', marginBottom: 6 }}>เข้าสู่ระบบ</h2>
+                    <div style={{ marginBottom: isMobile ? '1.25rem' : '2rem' }}>
+                        <h2 style={{ fontSize: isMobile ? '1.4rem' : '1.75rem', fontWeight: 800, color: '#111827', marginBottom: 6 }}>เข้าสู่ระบบ</h2>
                         <p style={{ color: '#6B7280', fontSize: '0.875rem' }}>กรอกชื่อผู้ใช้และรหัสผ่านของคุณ</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
+                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <div>
                             <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
                                 ชื่อผู้ใช้
@@ -124,24 +161,12 @@ export default function LoginPage() {
                                 type="text"
                                 value={form.username}
                                 onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
-                                style={{
-                                    width: '100%', padding: '0.7rem 1rem',
-                                    background: 'white', border: '1.5px solid #E5E7EB',
-                                    borderRadius: 12, color: '#111827',
-                                    fontSize: '0.9rem', outline: 'none',
-                                    fontFamily: 'inherit', transition: 'all 0.2s',
-                                    boxSizing: 'border-box',
-                                }}
+                                style={inputStyle}
                                 placeholder="username"
                                 required
-                                onFocus={e => {
-                                    e.target.style.borderColor = '#E8162A'
-                                    e.target.style.boxShadow = '0 0 0 3px rgba(232,22,42,0.1)'
-                                }}
-                                onBlur={e => {
-                                    e.target.style.borderColor = '#E5E7EB'
-                                    e.target.style.boxShadow = 'none'
-                                }}
+                                autoComplete="username"
+                                onFocus={e => { e.target.style.borderColor = '#E8162A'; e.target.style.boxShadow = '0 0 0 3px rgba(232,22,42,0.1)' }}
+                                onBlur={e => { e.target.style.borderColor = '#E5E7EB'; e.target.style.boxShadow = 'none' }}
                             />
                         </div>
 
@@ -153,24 +178,12 @@ export default function LoginPage() {
                                 type="password"
                                 value={form.password}
                                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                                style={{
-                                    width: '100%', padding: '0.7rem 1rem',
-                                    background: 'white', border: '1.5px solid #E5E7EB',
-                                    borderRadius: 12, color: '#111827',
-                                    fontSize: '0.9rem', outline: 'none',
-                                    fontFamily: 'inherit', transition: 'all 0.2s',
-                                    boxSizing: 'border-box',
-                                }}
+                                style={inputStyle}
                                 placeholder="••••••••"
                                 required
-                                onFocus={e => {
-                                    e.target.style.borderColor = '#E8162A'
-                                    e.target.style.boxShadow = '0 0 0 3px rgba(232,22,42,0.1)'
-                                }}
-                                onBlur={e => {
-                                    e.target.style.borderColor = '#E5E7EB'
-                                    e.target.style.boxShadow = 'none'
-                                }}
+                                autoComplete="current-password"
+                                onFocus={e => { e.target.style.borderColor = '#E8162A'; e.target.style.boxShadow = '0 0 0 3px rgba(232,22,42,0.1)' }}
+                                onBlur={e => { e.target.style.borderColor = '#E5E7EB'; e.target.style.boxShadow = 'none' }}
                             />
                         </div>
 
@@ -178,28 +191,14 @@ export default function LoginPage() {
                             type="submit"
                             disabled={loading}
                             style={{
-                                width: '100%', padding: '0.825rem',
+                                width: '100%', padding: '0.9rem',
                                 marginTop: 4,
                                 background: loading ? '#FECACA' : '#E8162A',
                                 color: 'white', fontWeight: 700,
-                                fontSize: '0.925rem',
+                                fontSize: '1rem', minHeight: 52,
                                 borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
                                 boxShadow: loading ? 'none' : '0 4px 14px rgba(232,22,42,0.35)',
                                 transition: 'all 0.2s', fontFamily: 'inherit',
-                            }}
-                            onMouseEnter={e => {
-                                if (!loading) {
-                                    (e.currentTarget as HTMLElement).style.background = '#C0111F'
-                                        ; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(232,22,42,0.45)'
-                                        ; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'
-                                }
-                            }}
-                            onMouseLeave={e => {
-                                if (!loading) {
-                                    (e.currentTarget as HTMLElement).style.background = '#E8162A'
-                                        ; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(232,22,42,0.35)'
-                                        ; (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
-                                }
                             }}
                         >
                             {loading ? '⏳ กำลังเข้าสู่ระบบ...' : '🔓 เข้าสู่ระบบ'}
@@ -207,30 +206,30 @@ export default function LoginPage() {
                     </form>
 
                     {/* Quick credentials hint */}
-                    <div style={{ marginTop: '2rem', padding: '1rem', background: '#FEF2F2', borderRadius: 12, border: '1px solid #FECACA' }}>
+                    <div style={{ marginTop: '1.5rem', padding: '0.875rem', background: '#FEF2F2', borderRadius: 12, border: '1px solid #FECACA' }}>
                         <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#DC2626', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                             🔑 รหัสผ่านเริ่มต้น — กดเพื่อกรอกอัตโนมัติ
                         </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr', gap: '4px' }}>
                             {[
                                 { u: 'owner', p: 'owner1234', label: '👑 เจ้าของร้าน' },
                                 { u: 'manager', p: 'manager1234', label: '📊 ผู้จัดการ' },
                                 { u: 'cashier', p: 'staff1234', label: '💰 แคชเชียร์' },
                                 { u: 'kitchen', p: 'staff1234', label: '🍳 ครัว' },
                                 { u: 'bar', p: 'staff1234', label: '🍸 บาร์' },
-                                { u: 'warehouse', p: 'staff1234', label: '🏭 คลังสินค้า' },
+                                { u: 'warehouse', p: 'staff1234', label: '🏭 คลัง' },
                             ].map(({ u, p, label }) => (
                                 <button key={u} onClick={() => setForm({ username: u, password: p })} style={{
                                     background: 'none', border: '1px solid #FECACA', borderRadius: 6, cursor: 'pointer',
-                                    textAlign: 'left', padding: '4px 8px', fontFamily: 'monospace', fontSize: '0.72rem',
+                                    textAlign: 'left', padding: '6px 10px', fontFamily: 'inherit', fontSize: '0.75rem',
                                     color: '#DC2626', display: 'flex', justifyContent: 'space-between', gap: 8,
-                                    transition: 'background 0.15s',
+                                    transition: 'background 0.15s', minHeight: 36,
                                 }}
                                     onMouseEnter={e => (e.currentTarget.style.background = '#FEE2E2')}
                                     onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                                 >
                                     <span>{label}</span>
-                                    <span style={{ opacity: 0.6 }}>{u} / {p}</span>
+                                    <span style={{ opacity: 0.6, fontFamily: 'monospace' }}>{u}</span>
                                 </button>
                             ))}
                         </div>

@@ -144,7 +144,7 @@ export default function KitchenPage() {
                     ✅ ไม่มีออเดอร์ค้าง
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+                <div className="kitchen-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
                     {queue.map(order => {
                         const hasPending = order.items.some(i => i.kitchenStatus === 'PENDING')
                         const allReady = order.items.every(i => i.kitchenStatus === 'READY' || i.kitchenStatus === 'SERVED')
