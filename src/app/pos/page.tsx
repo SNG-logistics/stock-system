@@ -79,6 +79,7 @@ export default function POSPage() {
     const [showMenuOverlay, setShowMenuOverlay] = useState(false)  // full-screen menu overlay
     const [noKitchen, setNoKitchen] = useState(false)  // ไม่ส่งครัว checkbox
     const [showMoveModal, setShowMoveModal] = useState(false)  // ย้ายโต๊ะ modal
+    const [mobileTab, setMobileTab] = useState<'tables' | 'order'>('tables')  // mobile bottom nav
     const searchRef = useRef<HTMLInputElement>(null)
 
     // ─── Auth Check ───────────────────────────────────────────
@@ -207,6 +208,7 @@ export default function POSPage() {
             setDiscountType('AMOUNT')
             setOrderStartTime(new Date())  // เริ่มจับเวลาใหม่
         }
+        if (isMobile) setMobileTab('order')  // auto-switch on mobile
     }
 
     // ─── Protein / Topping selection ────────────────────────────
@@ -615,7 +617,7 @@ export default function POSPage() {
             )}
 
             {/* ════ LEFT PANEL — Table Grid ════ */}
-            <div style={{ flex: '0 0 56%', display: 'flex', flexDirection: 'column', borderRight: '1px solid #E5E7EB', background: '#fff', overflow: 'hidden' }}>
+            <div style={{ flex: isMobile ? '0 0 100%' : '0 0 56%', display: isMobile && mobileTab !== 'tables' ? 'none' : 'flex', flexDirection: 'column', borderRight: '1px solid #E5E7EB', background: '#fff', overflow: 'hidden', paddingBottom: isMobile ? 60 : 0 }}>
                 {/* Top Bar */}
                 <div style={{ background: '#1A1D26', color: '#fff', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                     <span style={{ fontSize: '1.3rem' }}>🍽️</span>
@@ -687,7 +689,7 @@ export default function POSPage() {
             </div>
 
             {/* ════ RIGHT PANEL — Order Detail ════ */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FAFBFD', overflow: 'hidden', minWidth: 0 }}>
+            <div style={{ flex: 1, display: isMobile && mobileTab !== 'order' ? 'none' : 'flex', flexDirection: 'column', background: '#FAFBFD', overflow: 'hidden', minWidth: 0, paddingBottom: isMobile ? 60 : 0 }}>
                 {!selectedTable ? (
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>
                         <div style={{ fontSize: '3rem', marginBottom: 12 }}>🪑</div>
@@ -793,124 +795,163 @@ export default function POSPage() {
                 )}
             </div>
 
+            {/* ════ MOBILE BOTTOM NAV ════ */}
+            {isMobile && (
+                <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 150, background: '#1A1D26', borderTop: '1px solid #374151', display: 'flex', height: 60, paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                    <button onClick={() => setMobileTab('tables')} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, border: 'none', background: 'transparent', cursor: 'pointer', color: mobileTab === 'tables' ? '#E8364E' : '#9CA3AF', transition: 'color 0.15s' }}>
+                        <span style={{ fontSize: '1.3rem' }}>🪑</span>
+                        <span style={{ fontSize: '0.65rem', fontWeight: mobileTab === 'tables' ? 700 : 400 }}>โต๊ะ</span>
+                    </button>
+                    <button onClick={() => { if (selectedTable) setMobileTab('order'); else setToast({ message: 'กรุณาเลือกโต๊ะก่อน', type: 'warning' }) }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, border: 'none', background: 'transparent', cursor: 'pointer', color: mobileTab === 'order' ? '#E8364E' : '#9CA3AF', position: 'relative', transition: 'color 0.15s' }}>
+                        <span style={{ fontSize: '1.3rem' }}>🛒</span>
+                        {orderItems.length > 0 && <span style={{ position: 'absolute', top: 8, right: '28%', background: '#E8364E', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: '0.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{orderItems.length}</span>}
+                        <span style={{ fontSize: '0.65rem', fontWeight: mobileTab === 'order' ? 700 : 400 }}>รายการ</span>
+                    </button>
+                    <button onClick={() => { if (orderItems.length > 0) { setShowReceiptPreview(true) } else setToast({ message: 'ยังไม่มีรายการ', type: 'warning' }) }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, border: 'none', background: 'transparent', cursor: 'pointer', color: '#9CA3AF', transition: 'color 0.15s' }}>
+                        <span style={{ fontSize: '1.3rem' }}>💳</span>
+                        <span style={{ fontSize: '0.65rem' }}>ชำระ</span>
+                    </button>
+                </div>
+            )}
+
             {/* ════ MENU OVERLAY ════ */}
             {showMenuOverlay && (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', background: '#F0F2F5' }}>
-                    {/* Left: Category tabs + Product grid */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                        {/* Category Horizontal Scroll */}
-                        <div style={{ display: 'flex', alignItems: 'center', overflowX: 'auto', scrollbarWidth: 'none', background: '#1A1D26', flexShrink: 0 }}>
-                            <button onClick={() => setSelectedCategory('ALL')} style={{ padding: '0.65rem 1rem', border: 'none', background: selectedCategory === 'ALL' ? '#E8364E' : 'transparent', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontWeight: selectedCategory === 'ALL' ? 700 : 400, fontSize: '0.82rem', whiteSpace: 'nowrap', flexShrink: 0 }}>เมนู</button>
-                            {categories.map(cat => (
-                                <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} style={{ padding: '0.65rem 0.9rem', border: 'none', background: selectedCategory === cat.id ? (cat.color || '#E8364E') : 'transparent', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontWeight: selectedCategory === cat.id ? 700 : 400, fontSize: '0.82rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                    {cat.icon} {cat.name}
-                                </button>
-                            ))}
-                        </div>
-                        {/* Search */}
-                        <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #E5E7EB', background: '#fff', flexShrink: 0 }}>
-                            <input ref={searchRef} type="text" placeholder="🔍 ค้นหาเมนู..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                                style={{ width: '100%', padding: '0.45rem 0.75rem', border: '1px solid #E5E7EB', borderRadius: 10, fontFamily: 'inherit', fontSize: '0.85rem', outline: 'none', background: '#FAFBFD' }} />
-                        </div>
-                        {/* Product Grid */}
-                        <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.6rem', alignContent: 'start' }}>
-                            {filteredProducts.map(product => {
-                                const catColor = product.category?.color || '#4B5563'
-                                const bg = product.imageUrl
-                                    ? `url("${product.imageUrl}") center/cover no-repeat`
-                                    : catColor
-                                return (
-                                    <div key={product.id} role="button" tabIndex={0}
-                                        onClick={() => addItem(product)}
-                                        onKeyDown={e => e.key === 'Enter' && addItem(product)}
-                                        style={{
-                                            position: 'relative',
-                                            minHeight: 170,
-                                            borderRadius: 14,
-                                            overflow: 'hidden',
-                                            cursor: 'pointer',
-                                            background: bg,
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                                            transition: 'transform 0.15s, box-shadow 0.15s',
-                                            userSelect: 'none',
-                                        }}
-                                        onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'scale(1.03)'; d.style.boxShadow = '0 6px 20px rgba(0,0,0,0.22)' }}
-                                        onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)' }}>
-                                        {/* Emoji for no-image */}
-                                        {!product.imageUrl && (
-                                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.5rem', opacity: 0.85 }}>
-                                                {product.category?.icon || '🍽️'}
-                                            </div>
-                                        )}
-                                        {/* Price badge */}
-                                        <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(10,10,10,0.75)', backdropFilter: 'blur(6px)', borderRadius: 8, padding: '2px 8px', color: '#FCD34D', fontWeight: 800, fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
-                                            {formatLAK(product.salePrice)} ₭
-                                        </div>
-                                        {/* Bottom gradient + name */}
-                                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.72))', padding: '20px 8px 8px' }}>
-                                            <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', lineHeight: 1.3, textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
-                                                {product.name}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                            {filteredProducts.length === 0 && (
-                                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '2rem', color: '#9CA3AF' }}>📭 ไม่พบเมนู</div>
-                            )}
-                        </div>
-                    </div>
-                    {/* Right: Cart summary */}
-                    <div style={{ width: 300, display: 'flex', flexDirection: 'column', background: '#fff', borderLeft: '1px solid #E5E7EB' }}>
-                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #E5E7EB', flexShrink: 0, background: '#1A1D26' }}>
-                            <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>{selectedTable?.name}</div>
-                            {currentOrder && <div style={{ fontSize: '0.68rem', color: '#9CA3AF' }}>#{currentOrder.orderNumber}</div>}
-                        </div>
-                        <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
-                            {orderItems.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '2rem', color: '#9CA3AF', fontSize: '0.85rem' }}>ยังไม่มีรายการ</div>
-                            ) : (
-                                orderItems.map((item, idx) => (
-                                    <div key={idx} style={{ padding: '0.5rem', borderBottom: '1px solid #F3F4F6' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
-                                            <span style={{ flex: 1, fontSize: '0.83rem', fontWeight: 600, color: '#1A1D26' }}>({item.quantity}) {item.product?.name}</span>
-                                            <button onClick={() => removeItem(idx)} style={{ background: '#EF4444', border: 'none', color: '#fff', borderRadius: 6, width: 24, height: 24, cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</button>
-                                            <button onClick={() => updateItemQty(idx, -1)} style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>−</button>
-                                            <span style={{ minWidth: 20, textAlign: 'center', fontWeight: 700, fontSize: '0.85rem' }}>{item.quantity}</span>
-                                            <button onClick={() => updateItemQty(idx, 1)} style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>+</button>
-                                        </div>
-                                        <div style={{ fontSize: '0.72rem', color: '#9CA3AF', textAlign: 'right' }}>ราคา {formatLAK(item.quantity * item.unitPrice)} กีบ</div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                        <div style={{ borderTop: '1px solid #E5E7EB', padding: '0.75rem 1rem', flexShrink: 0 }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: '#6B7280', marginBottom: 10, cursor: 'pointer' }}>
-                                <input type="checkbox" checked={noKitchen} onChange={e => setNoKitchen(e.target.checked)} />ไม่ส่งครัว
-                            </label>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: '0.9rem', fontWeight: 700 }}>
-                                <span style={{ color: '#1A1D26' }}>รวม ({orderItems.length} รายการ)</span>
-                                <span style={{ color: '#7C3AED' }}>{formatLAK(totalAmount)} .-</span>
+                <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', background: '#F0F2F5' }}>
+                        {/* Left: Category tabs + Product grid */}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                            {/* Category Horizontal Scroll */}
+                            <div style={{ display: 'flex', alignItems: 'center', overflowX: 'auto', scrollbarWidth: 'none', background: '#1A1D26', flexShrink: 0 }}>
+                                <button onClick={() => setSelectedCategory('ALL')} style={{ padding: '0.65rem 1rem', border: 'none', background: selectedCategory === 'ALL' ? '#E8364E' : 'transparent', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontWeight: selectedCategory === 'ALL' ? 700 : 400, fontSize: '0.82rem', whiteSpace: 'nowrap', flexShrink: 0 }}>เมนู</button>
+                                {categories.map(cat => (
+                                    <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} style={{ padding: '0.65rem 0.9rem', border: 'none', background: selectedCategory === cat.id ? (cat.color || '#E8364E') : 'transparent', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontWeight: selectedCategory === cat.id ? 700 : 400, fontSize: '0.82rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                        {cat.icon} {cat.name}
+                                    </button>
+                                ))}
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                <button onClick={() => setShowMenuOverlay(false)} style={{ padding: '0.75rem', background: '#EF4444', border: 'none', borderRadius: 12, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.9rem' }}>ยกเลิก</button>
-                                <button onClick={async () => {
-                                    if (noKitchen) {
-                                        // บันทึกเงียบ ไม่ส่งครัว
-                                        await saveOrder()
-                                        setShowMenuOverlay(false)
-                                    } else {
-                                        await confirmAndSaveOrder()
-                                        setShowMenuOverlay(false)
-                                    }
-                                }} disabled={orderItems.length === 0 || loading}
-                                    style={{ padding: '0.75rem', background: orderItems.length === 0 ? '#E5E7EB' : '#16A34A', border: 'none', borderRadius: 12, color: orderItems.length === 0 ? '#9CA3AF' : '#fff', fontWeight: 700, cursor: orderItems.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '0.9rem' }}>
-                                    {noKitchen ? 'บันทึก (ไม่ส่งครัว)' : 'ส่งครัว'}
-                                </button>
+                            {/* Search */}
+                            <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #E5E7EB', background: '#fff', flexShrink: 0 }}>
+                                <input ref={searchRef} type="text" placeholder="🔍 ค้นหาเมนู..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                                    style={{ width: '100%', padding: '0.45rem 0.75rem', border: '1px solid #E5E7EB', borderRadius: 10, fontFamily: 'inherit', fontSize: '0.85rem', outline: 'none', background: '#FAFBFD' }} />
+                            </div>
+                            {/* Product Grid */}
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.6rem', alignContent: 'start' }}>
+                                {filteredProducts.map(product => {
+                                    const catColor = product.category?.color || '#4B5563'
+                                    const bg = product.imageUrl
+                                        ? `url("${product.imageUrl}") center/cover no-repeat`
+                                        : catColor
+                                    return (
+                                        <div key={product.id} role="button" tabIndex={0}
+                                            onClick={() => addItem(product)}
+                                            onKeyDown={e => e.key === 'Enter' && addItem(product)}
+                                            style={{
+                                                position: 'relative',
+                                                minHeight: 170,
+                                                borderRadius: 14,
+                                                overflow: 'hidden',
+                                                cursor: 'pointer',
+                                                background: bg,
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                                                transition: 'transform 0.15s, box-shadow 0.15s',
+                                                userSelect: 'none',
+                                            }}
+                                            onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'scale(1.03)'; d.style.boxShadow = '0 6px 20px rgba(0,0,0,0.22)' }}
+                                            onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)' }}>
+                                            {/* Emoji for no-image */}
+                                            {!product.imageUrl && (
+                                                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.5rem', opacity: 0.85 }}>
+                                                    {product.category?.icon || '🍽️'}
+                                                </div>
+                                            )}
+                                            {/* Price badge */}
+                                            <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(10,10,10,0.75)', backdropFilter: 'blur(6px)', borderRadius: 8, padding: '2px 8px', color: '#FCD34D', fontWeight: 800, fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
+                                                {formatLAK(product.salePrice)} ₭
+                                            </div>
+                                            {/* Bottom gradient + name */}
+                                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.72))', padding: '20px 8px 8px' }}>
+                                                <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.78rem', lineHeight: 1.3, textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
+                                                    {product.name}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                                {filteredProducts.length === 0 && (
+                                    <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '2rem', color: '#9CA3AF' }}>📭 ไม่พบเมนู</div>
+                                )}
                             </div>
                         </div>
+                        {/* Right: Cart summary — desktop only */}
+                        <div style={{ width: 300, display: isMobile ? 'none' : 'flex', flexDirection: 'column', background: '#fff', borderLeft: '1px solid #E5E7EB' }}>
+                            <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #E5E7EB', flexShrink: 0, background: '#1A1D26' }}>
+                                <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>{selectedTable?.name}</div>
+                                {currentOrder && <div style={{ fontSize: '0.68rem', color: '#9CA3AF' }}>#{currentOrder.orderNumber}</div>}
+                            </div>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+                                {orderItems.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '2rem', color: '#9CA3AF', fontSize: '0.85rem' }}>ยังไม่มีรายการ</div>
+                                ) : (
+                                    orderItems.map((item, idx) => (
+                                        <div key={idx} style={{ padding: '0.5rem', borderBottom: '1px solid #F3F4F6' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+                                                <span style={{ flex: 1, fontSize: '0.83rem', fontWeight: 600, color: '#1A1D26' }}>({item.quantity}) {item.product?.name}</span>
+                                                <button onClick={() => removeItem(idx)} style={{ background: '#EF4444', border: 'none', color: '#fff', borderRadius: 6, width: 24, height: 24, cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</button>
+                                                <button onClick={() => updateItemQty(idx, -1)} style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>−</button>
+                                                <span style={{ minWidth: 20, textAlign: 'center', fontWeight: 700, fontSize: '0.85rem' }}>{item.quantity}</span>
+                                                <button onClick={() => updateItemQty(idx, 1)} style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>+</button>
+                                            </div>
+                                            <div style={{ fontSize: '0.72rem', color: '#9CA3AF', textAlign: 'right' }}>ราคา {formatLAK(item.quantity * item.unitPrice)} กีบ</div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            <div style={{ borderTop: '1px solid #E5E7EB', padding: '0.75rem 1rem', flexShrink: 0 }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: '#6B7280', marginBottom: 10, cursor: 'pointer' }}>
+                                    <input type="checkbox" checked={noKitchen} onChange={e => setNoKitchen(e.target.checked)} />ไม่ส่งครัว
+                                </label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: '0.9rem', fontWeight: 700 }}>
+                                    <span style={{ color: '#1A1D26' }}>รวม ({orderItems.length} รายการ)</span>
+                                    <span style={{ color: '#7C3AED' }}>{formatLAK(totalAmount)} .-</span>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                    <button onClick={() => setShowMenuOverlay(false)} style={{ padding: '0.75rem', background: '#EF4444', border: 'none', borderRadius: 12, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.9rem' }}>ยกเลิก</button>
+                                    <button onClick={async () => {
+                                        if (noKitchen) {
+                                            // บันทึกเงียบ ไม่ส่งครัว
+                                            await saveOrder()
+                                            setShowMenuOverlay(false)
+                                        } else {
+                                            await confirmAndSaveOrder()
+                                            setShowMenuOverlay(false)
+                                        }
+                                    }} disabled={orderItems.length === 0 || loading}
+                                        style={{ padding: '0.75rem', background: orderItems.length === 0 ? '#E5E7EB' : '#16A34A', border: 'none', borderRadius: 12, color: orderItems.length === 0 ? '#9CA3AF' : '#fff', fontWeight: 700, cursor: orderItems.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '0.9rem' }}>
+                                        {noKitchen ? 'บันทึก (ไม่ส่งครัว)' : 'ส่งครัว'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                    {/* Mobile: floating bottom bar inside overlay */}
+                    {isMobile && (
+                        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 300, background: '#fff', borderTop: '1px solid #E5E7EB', padding: '0.6rem 1rem', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: '#6B7280', cursor: 'pointer' }}>
+                                    <input type="checkbox" checked={noKitchen} onChange={e => setNoKitchen(e.target.checked)} />ไม่ส่งครัว
+                                </label>
+                                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#7C3AED' }}>รวม {formatLAK(totalAmount)}</span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8 }}>
+                                <button onClick={() => setShowMenuOverlay(false)} style={{ padding: '0.65rem', background: '#EF4444', border: 'none', borderRadius: 12, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.9rem' }}>ยกเลิก</button>
+                                <button onClick={async () => { if (noKitchen) { await saveOrder(); setShowMenuOverlay(false) } else { await confirmAndSaveOrder(); setShowMenuOverlay(false) } }} disabled={orderItems.length === 0 || loading}
+                                    style={{ padding: '0.65rem', background: orderItems.length === 0 ? '#E5E7EB' : '#16A34A', border: 'none', borderRadius: 12, color: orderItems.length === 0 ? '#9CA3AF' : '#fff', fontWeight: 700, cursor: orderItems.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '0.9rem' }}>
+                                    {noKitchen ? 'บันทึก (ไม่ส่งครัว)' : `ส่งครัว (${orderItems.length} รายการ)`}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
 
             {/* ════ RECEIPT PREVIEW MODAL ════ */}
