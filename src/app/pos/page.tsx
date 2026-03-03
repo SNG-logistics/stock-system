@@ -629,7 +629,7 @@ export default function POSPage() {
                                 <div style={{ marginTop: 'auto' }}>
                                     {hasOrder ? (
                                         <>
-                                            {elapsed && <div style={{ fontSize: '0.7rem', color: '#FCD34D', fontWeight: 700 }}>⏱️ {elapsed}</div>}
+                                            {nowString && elapsed && <div style={{ fontSize: '0.7rem', color: '#FCD34D', fontWeight: 700 }}>⏱️ {elapsed}</div>}
                                             {(order?.totalAmount ?? 0) > 0 && <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#4ADE80' }}>{formatLAK(order!.totalAmount)}</div>}
                                         </>
                                     ) : (
@@ -675,8 +675,8 @@ export default function POSPage() {
                             <div style={{ background: '#fff', borderRadius: 12, padding: '0.75rem 1rem', border: '1px solid #E5E7EB' }}>
                                 {([
                                     ['โต้อาหาร', selectedTable.name],
-                                    ['เวลามา', orderStartTime?.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) || '−'],
-                                    ['เวลาที่ใช้', elapsedLabel(selectedTable) || '00:00'],
+                                    ['เวลามา', nowString ? (orderStartTime?.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) || '−') : '−'],
+                                    ['เวลาที่ใช้', nowString ? (elapsedLabel(selectedTable) || '00:00') : '00:00'],
                                     ['จำนวนคน', '−'],
                                     ['จำนวนรายการ', `${orderItems.length} รายการ`],
                                 ] as [string, string][]).map(([k, v]) => (
@@ -823,7 +823,16 @@ export default function POSPage() {
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                                 <button onClick={() => setShowMenuOverlay(false)} style={{ padding: '0.75rem', background: '#EF4444', border: 'none', borderRadius: 12, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.9rem' }}>ยกเลิก</button>
-                                <button onClick={async () => { await confirmAndSaveOrder(); setShowMenuOverlay(false) }} disabled={orderItems.length === 0 || loading}
+                                <button onClick={async () => {
+                                    if (noKitchen) {
+                                        // บันทึกเงียบ ไม่ส่งครัว
+                                        await saveOrder()
+                                        setShowMenuOverlay(false)
+                                    } else {
+                                        await confirmAndSaveOrder()
+                                        setShowMenuOverlay(false)
+                                    }
+                                }} disabled={orderItems.length === 0 || loading}
                                     style={{ padding: '0.75rem', background: orderItems.length === 0 ? '#E5E7EB' : '#16A34A', border: 'none', borderRadius: 12, color: orderItems.length === 0 ? '#9CA3AF' : '#fff', fontWeight: 700, cursor: orderItems.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '0.9rem' }}>ส่งครัว</button>
                             </div>
                         </div>
