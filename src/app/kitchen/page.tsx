@@ -63,7 +63,7 @@ export default function KitchenPage() {
     const [statusFilter, setStatusFilter] = useState('PENDING,ACCEPTED,COOKING,READY')
     const [counts, setCounts] = useState({ PENDING: 0, ACCEPTED: 0, COOKING: 0, READY: 0 })
     const [loading, setLoading] = useState(true)
-    const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+    const [lastUpdate, setLastUpdate] = useState<Date | null>(null)  // null until client mounts
     const prevOrderIdsRef = useRef<Set<string>>(new Set())
     const isFirstLoadRef = useRef(true)
     const [stock, setStock] = useState<InventoryItem[]>([])
@@ -188,7 +188,7 @@ export default function KitchenPage() {
                 <div>
                     <h1 className="page-title">🍳 Kitchen Display</h1>
                     <p className="page-subtitle">
-                        อัปเดตล่าสุด: {lastUpdate.toLocaleTimeString('th-TH')} • {totalItems} รายการ
+                        อัปเดตล่าสุด: {lastUpdate?.toLocaleTimeString('th-TH') ?? '--:--'} • {totalItems} รายการ
                     </p>
                 </div>
 

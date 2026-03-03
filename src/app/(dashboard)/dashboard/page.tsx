@@ -44,7 +44,7 @@ export default function DashboardPage() {
     const currentUser = useCurrentUser()
     const [data, setData] = useState<DashboardData | null>(null)
     const [loading, setLoading] = useState(true)
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+    const [selectedDate, setSelectedDate] = useState('')   // ← init empty; set client-side only
     const [showStockDetail, setShowStockDetail] = useState(false)
     const [showLowStock, setShowLowStock] = useState(false)
     const [showRecentOrders, setShowRecentOrders] = useState(false)
@@ -59,6 +59,8 @@ export default function DashboardPage() {
     }, [currentUser, router])
 
     useEffect(() => {
+        // Set today client-side only — avoids SSR/client Date mismatch
+        setSelectedDate(new Date().toISOString().split('T')[0])
         const check = () => setIsMobile(window.innerWidth < 768)
         check()
         window.addEventListener('resize', check)
@@ -80,7 +82,7 @@ export default function DashboardPage() {
         finally { setLoading(false) }
     }
 
-    useEffect(() => { fetchDashboard(selectedDate) }, [selectedDate])
+    useEffect(() => { if (selectedDate) fetchDashboard(selectedDate) }, [selectedDate])
 
     const thaiDate = selectedDate ? format(new Date(selectedDate), 'd MMMM yyyy', { locale: th }) : ''
 

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { formatLAK } from '@/lib/utils'
 
@@ -10,11 +10,14 @@ interface ImportResult {
 
 export default function SalesImportPage() {
     const [file, setFile] = useState<File | null>(null)
-    const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0])
+    const [saleDate, setSaleDate] = useState('')  // init empty; set client-side to avoid SSR mismatch
     const [loading, setLoading] = useState(false)
     const [result, setResult] = useState<ImportResult | null>(null)
     const [isDragging, setIsDragging] = useState(false)
     const fileRef = useRef<HTMLInputElement>(null)
+
+    // Init saleDate client-side only (avoids SSR hydration mismatch)
+    useEffect(() => { setSaleDate(new Date().toISOString().split('T')[0]) }, [])
 
     async function handleImport() {
         if (!file) return toast.error('กรุณาเลือกไฟล์ Excel')
