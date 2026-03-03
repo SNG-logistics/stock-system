@@ -71,6 +71,22 @@ export const POST = withAuth(async (req: NextRequest, ctx) => {
             ? data.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
             : 0
 
+        const BAR_CODES = ['BEER', 'BEER_DRAFT', 'WINE', 'COCKTAIL', 'DRINK', 'WATER', 'ENTERTAIN', 'PR']
+        const BAR_KEYWORDS = ['beer', 'drink', 'bev', 'bar', 'wine', 'cocktail', 'whisky', 'vodka', 'rum', 'เครื่องดื่ม', 'น้ำ', 'เบียร', 'เหล้า', 'แอลกอฮอล์']
+
+        // Ensure items is defined before we proceed
+        let itemsToCreate: typeof data.items = data.items || []
+        let productMap: Record<string, { category: { code: string; name: string } | null }> = {}
+
+        if (itemsToCreate.length > 0) {
+            const productIds = itemsToCreate.map(i => i.productId)
+            const products = await prisma.product.findMany({
+                where: { id: { in: productIds } },
+                include: { category: true },
+            })
+            productMap = Object.fromEntries(products.map(p => [p.id, p]))
+        }
+
         const order = await prisma.order.create({
             data: {
                 orderNumber,
@@ -78,13 +94,21 @@ export const POST = withAuth(async (req: NextRequest, ctx) => {
                 createdById: ctx.user?.userId,
                 subtotal,
                 totalAmount: subtotal,
-                items: data.items ? {
-                    create: data.items.map(item => ({
-                        productId: item.productId,
-                        quantity: item.quantity,
-                        unitPrice: item.unitPrice,
-                        note: item.note || null,
-                    })),
+                items: itemsToCreate.length > 0 ? {
+                    create: itemsToCreate.map(item => {
+                        const prod = productMap[item.productId]
+                        const catCode = (prod?.category?.code || '').toUpperCase()
+                        const catName = (prod?.category?.name || '').toLowerCase()
+                        const isBar = BAR_CODES.some(c => catCode.includes(c)) || BAR_KEYWORDS.some(k => catName.includes(k))
+                        return {
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            unitPrice: item.unitPrice,
+                            note: item.note || null,
+                            stationId: isBar ? 'BAR' : 'KITCHEN',
+                            kitchenStatus: 'PENDING',
+                        }
+                    }),
                 } : undefined,
             },
             include: {
