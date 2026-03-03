@@ -13,6 +13,11 @@ interface QueueOrder {
     openedAt: string; orderNote: string | null
     items: QueueItem[]
 }
+interface InventoryItem {
+    id: string; quantity: number; avgCost: number
+    product: { name: string; sku: string; unit: string; minQty: number; category: { icon: string; name: string; code: string } }
+    location: { name: string; code: string }
+}
 
 const STATUS_COLORS: Record<string, string> = {
     PENDING: '#F59E0B', ACCEPTED: '#3B82F6', COOKING: '#EF4444', READY: '#10B981', SERVED: '#6B7280',
@@ -59,6 +64,9 @@ export default function KitchenPage() {
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
     const prevOrderIdsRef = useRef<Set<string>>(new Set())
     const isFirstLoadRef = useRef(true)
+    const [stock, setStock] = useState<InventoryItem[]>([])
+    const [showStock, setShowStock] = useState(false)
+
 
     // ── Request browser notification permission on mount ──────────
     useEffect(() => {
@@ -123,6 +131,21 @@ export default function KitchenPage() {
         const interval = setInterval(fetchQueue, 5000)
         return () => clearInterval(interval)
     }, [fetchQueue])
+
+    // ── Fetch kitchen stock (every 60s) ────────────────────────────
+    const fetchStock = useCallback(async () => {
+        try {
+            const res = await fetch('/api/inventory')
+            const json = await res.json()
+            if (json.success) setStock(json.data.inventory)
+        } catch { }
+    }, [])
+    useEffect(() => { fetchStock() }, [fetchStock])
+    useEffect(() => {
+        const interval = setInterval(fetchStock, 60000)
+        return () => clearInterval(interval)
+    }, [fetchStock])
+
 
     const updateStatus = async (itemId: string, newStatus: string) => {
         const res = await fetch(`/api/kitchen/items/${itemId}/status`, {
@@ -318,6 +341,82 @@ export default function KitchenPage() {
                     })}
                 </div>
             )}
+
+            {/* ── Kitchen Stock Summary ──────────────────────────── */}
+            <div style={{ margin: '24px 0 0', maxWidth: 960, padding: '0 1rem' }}>
+                <div
+                    onClick={() => setShowStock(s => !s)}
+                    style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        background: '#fff', border: '2px solid #E5E7EB', borderRadius: 14,
+                        padding: '0.875rem 1.125rem', cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: '1.25rem' }}>🥬</span>
+                        <div>
+                            <p style={{ fontWeight: 700, color: '#1A1D26', fontSize: '0.9rem' }}>สต็อคคงเหลือ (ครัว)</p>
+                            <p style={{ fontSize: '0.72rem', color: '#9CA3AF' }}>
+                                {stock.length} รายการ •
+                                {stock.filter(i => i.quantity < 0).length > 0 && (
+                                    <span style={{ color: '#DC2626', fontWeight: 700 }}> ⚠️ {stock.filter(i => i.quantity < 0).length} ติดลบ</span>
+                                )}
+                                {stock.filter(i => i.quantity >= 0 && i.quantity < i.product.minQty && i.product.minQty > 0).length > 0 && (
+                                    <span style={{ color: '#D97706', fontWeight: 700 }}> • 🟡 {stock.filter(i => i.quantity >= 0 && i.quantity < i.product.minQty && i.product.minQty > 0).length} ใกล้หมด</span>
+                                )}
+                            </p>
+                        </div>
+                    </div>
+                    <span style={{ color: '#9CA3AF', fontSize: '1.1rem' }}>{showStock ? '▲' : '▼'}</span>
+                </div>
+
+                {showStock && (
+                    <div style={{
+                        marginTop: 8, background: '#fff', border: '1px solid #E5E7EB',
+                        borderRadius: 12, overflow: 'hidden',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                    }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 0 }}>
+                            {stock.map((item, i) => {
+                                const isNeg = item.quantity < 0
+                                const isLow = !isNeg && item.product.minQty > 0 && item.quantity < item.product.minQty
+                                const bg = isNeg ? '#FEF2F2' : isLow ? '#FFFBEB' : '#F0FDF4'
+                                const border = isNeg ? '#FECACA' : isLow ? '#FDE68A' : '#BBF7D0'
+                                const color = isNeg ? '#DC2626' : isLow ? '#D97706' : '#059669'
+                                return (
+                                    <div key={item.id} style={{
+                                        padding: '0.75rem 1rem',
+                                        borderBottom: i < stock.length - 1 ? '1px solid #F3F4F6' : 'none',
+                                        background: bg,
+                                        borderLeft: `3px solid ${border}`,
+                                        display: 'flex', flexDirection: 'column', gap: 2,
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                            <p style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1A1D26', flex: 1 }}>
+                                                {item.product.category.icon} {item.product.name}
+                                            </p>
+                                            {(isNeg || isLow) && (
+                                                <span style={{
+                                                    fontSize: '0.6rem', fontWeight: 700, color, borderRadius: 99,
+                                                    background: `${color}15`, padding: '1px 5px', marginLeft: 4,
+                                                }}>
+                                                    {isNeg ? 'ติดลบ' : 'ใกล้หมด'}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p style={{ fontSize: '1rem', fontWeight: 800, color, margin: 0 }}>
+                                            {item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(2)}
+                                            <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#6B7280', marginLeft: 4 }}>{item.product.unit}</span>
+                                        </p>
+                                        <p style={{ fontSize: '0.65rem', color: '#9CA3AF' }}>{item.location.name}</p>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
+            </div>
 
             <style>{`
                 @keyframes pulse {

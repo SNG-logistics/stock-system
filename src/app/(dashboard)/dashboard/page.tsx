@@ -1,9 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { formatLAK, formatLAKShort } from '@/lib/utils'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale/th'
 import Link from 'next/link'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 interface RecentOrder {
     id: string
@@ -38,6 +40,8 @@ interface DashboardData {
 }
 
 export default function DashboardPage() {
+    const router = useRouter()
+    const currentUser = useCurrentUser()
     const [data, setData] = useState<DashboardData | null>(null)
     const [loading, setLoading] = useState(true)
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
@@ -47,12 +51,24 @@ export default function DashboardPage() {
     const [showNegativeStock, setShowNegativeStock] = useState(false)
     const [isMobile, setIsMobile] = useState(false)
 
+    // ── Redirect kitchen/bar to KDS ─────────────────────────────────
+    useEffect(() => {
+        if (!currentUser) return
+        if (currentUser.role === 'kitchen') router.replace('/kitchen?station=KITCHEN')
+        if (currentUser.role === 'bar') router.replace('/kitchen?station=BAR')
+    }, [currentUser, router])
+
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth < 768)
         check()
         window.addEventListener('resize', check)
         return () => window.removeEventListener('resize', check)
     }, [])
+
+    // Don’t render financial dashboard for kitchen/bar while redirecting
+    if (currentUser?.role === 'kitchen' || currentUser?.role === 'bar') {
+        return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#9CA3AF' }}>กำลังเข้าสู่จอครัว...</div>
+    }
 
     async function fetchDashboard(date: string) {
         setLoading(true)
