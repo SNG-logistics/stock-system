@@ -14,8 +14,11 @@ export const GET = withAuth(async (req: NextRequest) => {
         isCancelled: false,
         order: { status: 'OPEN' },
     }
-    if (station) {
-        where.stationId = station
+    if (station === 'BAR') {
+        where.stationId = 'BAR'
+    } else if (station === 'KITCHEN') {
+        // Include null stationId items as KITCHEN (legacy data fallback)
+        where.OR = [{ stationId: 'KITCHEN' }, { stationId: null }]
     }
 
     const items = await prisma.orderItem.findMany({
