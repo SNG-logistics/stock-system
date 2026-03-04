@@ -29,6 +29,10 @@ const CAT_NAME_MAP: Record<string, string> = {
     'วัตถุดิบ': 'RAW_VEG', 'raw': 'RAW_VEG',
     'เครื่องปรุง': 'DRY_GOODS', 'dry': 'DRY_GOODS', 'ของแห้ง': 'DRY_GOODS',
     'บรรจุภัณฑ์': 'PACKAGING', 'packaging': 'PACKAGING',
+    'ไข่': 'EGG', 'egg': 'EGG', 'eggs': 'EGG',
+    'นม': 'DAIRY', 'dairy': 'DAIRY', 'milk': 'DAIRY', 'cream': 'DAIRY', 'ครีม': 'DAIRY', 'เนย': 'DAIRY', 'butter': 'DAIRY',
+    'ชีส': 'CHEESE', 'cheese': 'CHEESE',
+    'แป้ง': 'FLOUR_DOUGH', 'flour': 'FLOUR_DOUGH', 'dough': 'FLOUR_DOUGH', 'โดว์': 'FLOUR_DOUGH',
     'โปร': 'SET', 'เซ็ต': 'SET', 'set': 'SET',
     'คาราโอเกะ': 'KARAOKE', 'karaoke': 'KARAOKE',
     'entertain': 'ENTERTAIN', 'entertainment': 'ENTERTAIN',
@@ -49,6 +53,11 @@ const CAT_RULES: Array<{ code: string; re: RegExp[] }> = [
     { code: 'RAW_VEG', re: [/ผัก|เห็ด|กระเทียม|หัวหอม|มะนาว|ขิง|มะเขือ|ถั่ว/i] },
 
     { code: 'PACKAGING', re: [/บรรจุภัณฑ์|กล่อง|ถุง|แก้ว|ฝา|หลอด|จาน|ช้อน|ส้อม/i] },
+    // ไข่/นม/ชีส/แป้ง — ต้องอยู่ก่อน DRY_GOODS เพื่อไม่ให้เนย/แป้งตก DRY_GOODS
+    { code: 'EGG', re: [/ไข่ไก่|ไข่เป็ด|ไข่เค็ม|ไข่เยี่ยวม้า|ไข่นกกระทา|\begg\b/i] },
+    { code: 'DAIRY', re: [/นม[สวดอ่อเผือก]|ครีม|โยเกิร์ต|เนยสด|\bbutter\b|\bcream\b|\bmilk\b|\byogurt\b/i] },
+    { code: 'CHEESE', re: [/ชีส|\bcheese\b|cheddar|mozzarella|parmesan|brie|gouda/i] },
+    { code: 'FLOUR_DOUGH', re: [/แป้งสาลี|แป้งหมู|โดว์|\bflour\b|\bdough\b|pizza.?base|แป้งพิซซ่า|แป้งขนมปัง/i] },
     { code: 'DRY_GOODS', re: [/เครื่องปรุง|ซอส|น้ำปลา|ซีอิ๊ว|พริกไทย|เกลือ|น้ำตาล|แป้ง/i] },
 
     { code: 'FOOD_GRILL', re: [/ปิ้ง|ย่าง|grill/i] },
@@ -86,8 +95,9 @@ const SKU_PREFIX: Record<string, string> = {
     WINE: 'WN', COCKTAIL: 'CK',
     DRINK: 'DR', WATER: 'WT',
     FOOD_GRILL: 'FG', FOOD_FRY: 'FF', FOOD_SEA: 'FS',
-    FOOD_VEG: 'FV', FOOD_LAAB: 'FL', FOOD_RICE: 'FR', FOOD_NOODLE: 'FN',
+    FOOD_VEG: 'FV', FOOD_LAAB: 'LA', FOOD_RICE: 'FR', FOOD_NOODLE: 'FN',
     RAW_MEAT: 'RM', RAW_PORK: 'RP', RAW_SEA: 'RS', RAW_VEG: 'RV',
+    EGG: 'EG', DAIRY: 'DA', CHEESE: 'CH', FLOUR_DOUGH: 'FD',
     DRY_GOODS: 'DG', PACKAGING: 'PK',
     KARAOKE: 'KR', ENTERTAIN: 'EN', SET: 'ST', OTHER: 'OT',
 }

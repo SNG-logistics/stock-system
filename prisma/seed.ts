@@ -47,6 +47,11 @@ async function main() {
         prisma.category.upsert({ where: { code: 'RAW_VEG' }, update: {}, create: { code: 'RAW_VEG', name: 'ผัก/วัตถุดิบสด', nameEn: 'Vegetables', color: '#16A34A', icon: '🥬' } }),
         prisma.category.upsert({ where: { code: 'DRY_GOODS' }, update: {}, create: { code: 'DRY_GOODS', name: 'เครื่องปรุง/แห้ง', nameEn: 'Dry Goods', color: '#92400E', icon: '🧂' } }),
         prisma.category.upsert({ where: { code: 'PACKAGING' }, update: {}, create: { code: 'PACKAGING', name: 'บรรจุภัณฑ์', nameEn: 'Packaging', color: '#9CA3AF', icon: '📦' } }),
+        // วัตถุดิบกลุ่มใหม่
+        prisma.category.upsert({ where: { code: 'EGG' }, update: {}, create: { code: 'EGG', name: 'ไข่ทุกชนิด', nameEn: 'Eggs', color: '#FBBF24', icon: '🥚' } }),
+        prisma.category.upsert({ where: { code: 'DAIRY' }, update: {}, create: { code: 'DAIRY', name: 'นม/ครีม/เนย', nameEn: 'Dairy', color: '#FDE68A', icon: '🥛' } }),
+        prisma.category.upsert({ where: { code: 'CHEESE' }, update: {}, create: { code: 'CHEESE', name: 'ชีสทุกชนิด', nameEn: 'Cheese', color: '#F59E0B', icon: '🧀' } }),
+        prisma.category.upsert({ where: { code: 'FLOUR_DOUGH' }, update: {}, create: { code: 'FLOUR_DOUGH', name: 'แป้ง/โดว์/พิซซ่าเบส', nameEn: 'Flour/Dough', color: '#D6D3D1', icon: '🫓' } }),
         prisma.category.upsert({ where: { code: 'OTHER' }, update: {}, create: { code: 'OTHER', name: 'อื่นๆ', nameEn: 'Other', color: '#6B7280', icon: '❓' } }),
     ])
     console.log(`✅ Categories: ${categories.length}`)
@@ -125,78 +130,78 @@ async function main() {
         // ══════════════════ สินค้าขาย (SALE_ITEM) ══════════════════
 
         // ──── 🍺 B: เบียร์ขวด ─────────────────────────────────
-        { sku: 'B001', name: 'Beer Lao ขวดใหญ่',              unit: 'ขวด',     salePrice: 30000,   costPrice: 18000,  reorderPoint: 24, minQty: 12, categoryId: cat['BEER'], productType: ProductType.SALE_ITEM },
-        { sku: 'B002', name: 'Beer Lao กระป๋อง',              unit: 'กระป๋อง', salePrice: 20000,   costPrice: 12000,  reorderPoint: 24, minQty: 12, categoryId: cat['BEER'], productType: ProductType.SALE_ITEM },
-        { sku: 'B003', name: 'Heineken ขวดใหญ่',              unit: 'ขวด',     salePrice: 45000,   costPrice: 28000,  reorderPoint: 24, minQty: 12, categoryId: cat['BEER'], productType: ProductType.SALE_ITEM },
-        { sku: 'B004', name: 'Carlsberg ขวดใหญ่',             unit: 'ขวด',     salePrice: 35000,   costPrice: 22000,  reorderPoint: 24, minQty: 12, categoryId: cat['BEER'], productType: ProductType.SALE_ITEM },
-        { sku: 'B005', name: 'Tiger ขวดใหญ่',                 unit: 'ขวด',     salePrice: 35000,   costPrice: 22000,  reorderPoint: 12, minQty: 6,  categoryId: cat['BEER'], productType: ProductType.SALE_ITEM },
+        { sku: 'B001', name: 'Beer Lao ขวดใหญ่', unit: 'ขวด', salePrice: 30000, costPrice: 18000, reorderPoint: 24, minQty: 12, categoryId: cat['BEER'], productType: ProductType.SALE_ITEM },
+        { sku: 'B002', name: 'Beer Lao กระป๋อง', unit: 'กระป๋อง', salePrice: 20000, costPrice: 12000, reorderPoint: 24, minQty: 12, categoryId: cat['BEER'], productType: ProductType.SALE_ITEM },
+        { sku: 'B003', name: 'Heineken ขวดใหญ่', unit: 'ขวด', salePrice: 45000, costPrice: 28000, reorderPoint: 24, minQty: 12, categoryId: cat['BEER'], productType: ProductType.SALE_ITEM },
+        { sku: 'B004', name: 'Carlsberg ขวดใหญ่', unit: 'ขวด', salePrice: 35000, costPrice: 22000, reorderPoint: 24, minQty: 12, categoryId: cat['BEER'], productType: ProductType.SALE_ITEM },
+        { sku: 'B005', name: 'Tiger ขวดใหญ่', unit: 'ขวด', salePrice: 35000, costPrice: 22000, reorderPoint: 12, minQty: 6, categoryId: cat['BEER'], productType: ProductType.SALE_ITEM },
 
         // ──── 🍻 BD: เบียร์สด/ทาวเวอร์ ───────────────────────
-        { sku: 'BD01', name: 'Heineken สด (ทาวเวอร์)',        unit: 'ทาวเวอร์', salePrice: 199000, costPrice: 90000,  reorderPoint: 0,  minQty: 0,  categoryId: cat['BEER_DRAFT'], productType: ProductType.SALE_ITEM },
-        { sku: 'BD02', name: 'Beer Lao สด (ทาวเวอร์)',        unit: 'ทาวเวอร์', salePrice: 159000, costPrice: 70000,  reorderPoint: 0,  minQty: 0,  categoryId: cat['BEER_DRAFT'], productType: ProductType.SALE_ITEM },
+        { sku: 'BD01', name: 'Heineken สด (ทาวเวอร์)', unit: 'ทาวเวอร์', salePrice: 199000, costPrice: 90000, reorderPoint: 0, minQty: 0, categoryId: cat['BEER_DRAFT'], productType: ProductType.SALE_ITEM },
+        { sku: 'BD02', name: 'Beer Lao สด (ทาวเวอร์)', unit: 'ทาวเวอร์', salePrice: 159000, costPrice: 70000, reorderPoint: 0, minQty: 0, categoryId: cat['BEER_DRAFT'], productType: ProductType.SALE_ITEM },
 
         // ──── 🍷 W: ไวน์/วิสกี้ ──────────────────────────────
-        { sku: 'W001', name: 'Johnnie Walker Black Label',     unit: 'ขวด',     salePrice: 1299000, costPrice: 700000, reorderPoint: 2,  minQty: 1,  categoryId: cat['WINE'], productType: ProductType.SALE_ITEM },
-        { sku: 'W002', name: 'Johnnie Walker Red Label',       unit: 'ขวด',     salePrice: 699000,  costPrice: 380000, reorderPoint: 2,  minQty: 1,  categoryId: cat['WINE'], productType: ProductType.SALE_ITEM },
-        { sku: 'W003', name: 'Penfolds BIN2 (2020)',           unit: 'ขวด',     salePrice: 990000,  costPrice: 550000, reorderPoint: 2,  minQty: 1,  categoryId: cat['WINE'], productType: ProductType.SALE_ITEM },
+        { sku: 'W001', name: 'Johnnie Walker Black Label', unit: 'ขวด', salePrice: 1299000, costPrice: 700000, reorderPoint: 2, minQty: 1, categoryId: cat['WINE'], productType: ProductType.SALE_ITEM },
+        { sku: 'W002', name: 'Johnnie Walker Red Label', unit: 'ขวด', salePrice: 699000, costPrice: 380000, reorderPoint: 2, minQty: 1, categoryId: cat['WINE'], productType: ProductType.SALE_ITEM },
+        { sku: 'W003', name: 'Penfolds BIN2 (2020)', unit: 'ขวด', salePrice: 990000, costPrice: 550000, reorderPoint: 2, minQty: 1, categoryId: cat['WINE'], productType: ProductType.SALE_ITEM },
 
         // ──── 🥤 D: เครื่องดื่ม ──────────────────────────────
-        { sku: 'D001', name: 'Pepsi ขวดพลาสติก',              unit: 'ขวด',     salePrice: 30000,   costPrice: 8000,   reorderPoint: 12, minQty: 6,  categoryId: cat['DRINK'], productType: ProductType.SALE_ITEM },
-        { sku: 'D002', name: 'Pepsi กระป๋อง',                 unit: 'กระป๋อง', salePrice: 15000,   costPrice: 7000,   reorderPoint: 24, minQty: 12, categoryId: cat['DRINK'], productType: ProductType.SALE_ITEM },
-        { sku: 'D003', name: 'Coca-Cola กระป๋อง',             unit: 'กระป๋อง', salePrice: 15000,   costPrice: 7000,   reorderPoint: 12, minQty: 6,  categoryId: cat['DRINK'], productType: ProductType.SALE_ITEM },
-        { sku: 'D004', name: 'Sprite กระป๋อง',                unit: 'กระป๋อง', salePrice: 15000,   costPrice: 7000,   reorderPoint: 12, minQty: 6,  categoryId: cat['DRINK'], productType: ProductType.SALE_ITEM },
-        { sku: 'D005', name: 'โซดา ขวดแก้ว',                  unit: 'ขวด',     salePrice: 15000,   costPrice: 5000,   reorderPoint: 24, minQty: 12, categoryId: cat['DRINK'], productType: ProductType.SALE_ITEM },
+        { sku: 'D001', name: 'Pepsi ขวดพลาสติก', unit: 'ขวด', salePrice: 30000, costPrice: 8000, reorderPoint: 12, minQty: 6, categoryId: cat['DRINK'], productType: ProductType.SALE_ITEM },
+        { sku: 'D002', name: 'Pepsi กระป๋อง', unit: 'กระป๋อง', salePrice: 15000, costPrice: 7000, reorderPoint: 24, minQty: 12, categoryId: cat['DRINK'], productType: ProductType.SALE_ITEM },
+        { sku: 'D003', name: 'Coca-Cola กระป๋อง', unit: 'กระป๋อง', salePrice: 15000, costPrice: 7000, reorderPoint: 12, minQty: 6, categoryId: cat['DRINK'], productType: ProductType.SALE_ITEM },
+        { sku: 'D004', name: 'Sprite กระป๋อง', unit: 'กระป๋อง', salePrice: 15000, costPrice: 7000, reorderPoint: 12, minQty: 6, categoryId: cat['DRINK'], productType: ProductType.SALE_ITEM },
+        { sku: 'D005', name: 'โซดา ขวดแก้ว', unit: 'ขวด', salePrice: 15000, costPrice: 5000, reorderPoint: 24, minQty: 12, categoryId: cat['DRINK'], productType: ProductType.SALE_ITEM },
 
         // ──── 💧 WI: น้ำดื่ม/น้ำแข็ง ─────────────────────────
-        { sku: 'WI01', name: 'น้ำดื่ม ขวดเล็ก',               unit: 'ขวด',     salePrice: 10000,   costPrice: 3000,   reorderPoint: 24, minQty: 12, categoryId: cat['WATER'], productType: ProductType.SALE_ITEM },
-        { sku: 'WI02', name: 'น้ำดื่ม ขวดกลาง',               unit: 'ขวด',     salePrice: 10000,   costPrice: 3000,   reorderPoint: 24, minQty: 12, categoryId: cat['WATER'], productType: ProductType.SALE_ITEM },
-        { sku: 'WI03', name: 'น้ำดื่ม ขวดใหญ่',               unit: 'ขวด',     salePrice: 20000,   costPrice: 5000,   reorderPoint: 24, minQty: 12, categoryId: cat['WATER'], productType: ProductType.SALE_ITEM },
-        { sku: 'WI04', name: 'น้ำแข็ง ถังเล็ก',               unit: 'ถัง',     salePrice: 15000,   costPrice: 5000,   reorderPoint: 10, minQty: 5,  categoryId: cat['WATER'], productType: ProductType.SALE_ITEM },
-        { sku: 'WI05', name: 'น้ำแข็ง ถังใหญ่',               unit: 'ถัง',     salePrice: 25000,   costPrice: 8000,   reorderPoint: 10, minQty: 5,  categoryId: cat['WATER'], productType: ProductType.SALE_ITEM },
+        { sku: 'WI01', name: 'น้ำดื่ม ขวดเล็ก', unit: 'ขวด', salePrice: 10000, costPrice: 3000, reorderPoint: 24, minQty: 12, categoryId: cat['WATER'], productType: ProductType.SALE_ITEM },
+        { sku: 'WI02', name: 'น้ำดื่ม ขวดกลาง', unit: 'ขวด', salePrice: 10000, costPrice: 3000, reorderPoint: 24, minQty: 12, categoryId: cat['WATER'], productType: ProductType.SALE_ITEM },
+        { sku: 'WI03', name: 'น้ำดื่ม ขวดใหญ่', unit: 'ขวด', salePrice: 20000, costPrice: 5000, reorderPoint: 24, minQty: 12, categoryId: cat['WATER'], productType: ProductType.SALE_ITEM },
+        { sku: 'WI04', name: 'น้ำแข็ง ถังเล็ก', unit: 'ถัง', salePrice: 15000, costPrice: 5000, reorderPoint: 10, minQty: 5, categoryId: cat['WATER'], productType: ProductType.SALE_ITEM },
+        { sku: 'WI05', name: 'น้ำแข็ง ถังใหญ่', unit: 'ถัง', salePrice: 25000, costPrice: 8000, reorderPoint: 10, minQty: 5, categoryId: cat['WATER'], productType: ProductType.SALE_ITEM },
 
         // ──── 🍖 FG: อาหารปิ้งย่าง ───────────────────────────
-        { sku: 'FG01', name: 'เสือร้องไห้ย่าง',               unit: 'จาน',     salePrice: 135000,  costPrice: 55000,  reorderPoint: 0,  minQty: 0,  categoryId: cat['FOOD_GRILL'], productType: ProductType.SALE_ITEM },
-        { sku: 'FG02', name: 'หมูย่าง',                       unit: 'จาน',     salePrice: 120000,  costPrice: 45000,  reorderPoint: 0,  minQty: 0,  categoryId: cat['FOOD_GRILL'], productType: ProductType.SALE_ITEM },
-        { sku: 'FG03', name: 'ไก่ย่าง (ครึ่งตัว)',             unit: 'จาน',     salePrice: 119000,  costPrice: 50000,  reorderPoint: 0,  minQty: 0,  categoryId: cat['FOOD_GRILL'], productType: ProductType.SALE_ITEM },
-        { sku: 'FG04', name: 'แกะอบ',                         unit: 'ตัว',     salePrice: 890000,  costPrice: 500000, reorderPoint: 0,  minQty: 0,  categoryId: cat['FOOD_GRILL'], productType: ProductType.SALE_ITEM },
+        { sku: 'FG01', name: 'เสือร้องไห้ย่าง', unit: 'จาน', salePrice: 135000, costPrice: 55000, reorderPoint: 0, minQty: 0, categoryId: cat['FOOD_GRILL'], productType: ProductType.SALE_ITEM },
+        { sku: 'FG02', name: 'หมูย่าง', unit: 'จาน', salePrice: 120000, costPrice: 45000, reorderPoint: 0, minQty: 0, categoryId: cat['FOOD_GRILL'], productType: ProductType.SALE_ITEM },
+        { sku: 'FG03', name: 'ไก่ย่าง (ครึ่งตัว)', unit: 'จาน', salePrice: 119000, costPrice: 50000, reorderPoint: 0, minQty: 0, categoryId: cat['FOOD_GRILL'], productType: ProductType.SALE_ITEM },
+        { sku: 'FG04', name: 'แกะอบ', unit: 'ตัว', salePrice: 890000, costPrice: 500000, reorderPoint: 0, minQty: 0, categoryId: cat['FOOD_GRILL'], productType: ProductType.SALE_ITEM },
 
         // ──── 🍟 FF: อาหารทอด ─────────────────────────────────
-        { sku: 'FF01', name: 'เฟรนช์ฟรายส์',                  unit: 'จาน',     salePrice: 85000,   costPrice: 20000,  reorderPoint: 0,  minQty: 0,  categoryId: cat['FOOD_FRY'], productType: ProductType.SALE_ITEM },
-        { sku: 'FF02', name: 'เอ็นไก่ทอดสมุนไพร',             unit: 'จาน',     salePrice: 95000,   costPrice: 35000,  reorderPoint: 0,  minQty: 0,  categoryId: cat['FOOD_FRY'], productType: ProductType.SALE_ITEM },
+        { sku: 'FF01', name: 'เฟรนช์ฟรายส์', unit: 'จาน', salePrice: 85000, costPrice: 20000, reorderPoint: 0, minQty: 0, categoryId: cat['FOOD_FRY'], productType: ProductType.SALE_ITEM },
+        { sku: 'FF02', name: 'เอ็นไก่ทอดสมุนไพร', unit: 'จาน', salePrice: 95000, costPrice: 35000, reorderPoint: 0, minQty: 0, categoryId: cat['FOOD_FRY'], productType: ProductType.SALE_ITEM },
 
         // ──── 🍚 FR: ข้าว/อาหารจานเดียว ──────────────────────
-        { sku: 'FR01', name: 'ข้าวเหนียว 1 กล่อง',            unit: 'กล่อง',   salePrice: 15000,   costPrice: 5000,   reorderPoint: 0,  minQty: 0,  categoryId: cat['FOOD_RICE'], productType: ProductType.SALE_ITEM },
-        { sku: 'FR02', name: 'ข้าวเจ้า 1 จาน',                unit: 'จาน',     salePrice: 15000,   costPrice: 5000,   reorderPoint: 0,  minQty: 0,  categoryId: cat['FOOD_RICE'], productType: ProductType.SALE_ITEM },
-        { sku: 'FR03', name: 'ข้าวผัด จานเล็ก',               unit: 'จาน',     salePrice: 79000,   costPrice: 25000,  reorderPoint: 0,  minQty: 0,  categoryId: cat['FOOD_RICE'], productType: ProductType.SALE_ITEM },
-        { sku: 'FR04', name: 'ข้าวผัด จานใหญ่',               unit: 'จาน',     salePrice: 239000,  costPrice: 60000,  reorderPoint: 0,  minQty: 0,  categoryId: cat['FOOD_RICE'], productType: ProductType.SALE_ITEM },
-        { sku: 'FR05', name: 'ข้าวพนักงาน',                   unit: 'จาน',     salePrice: 20000,   costPrice: 8000,   reorderPoint: 0,  minQty: 0,  categoryId: cat['FOOD_RICE'], productType: ProductType.SALE_ITEM },
+        { sku: 'FR01', name: 'ข้าวเหนียว 1 กล่อง', unit: 'กล่อง', salePrice: 15000, costPrice: 5000, reorderPoint: 0, minQty: 0, categoryId: cat['FOOD_RICE'], productType: ProductType.SALE_ITEM },
+        { sku: 'FR02', name: 'ข้าวเจ้า 1 จาน', unit: 'จาน', salePrice: 15000, costPrice: 5000, reorderPoint: 0, minQty: 0, categoryId: cat['FOOD_RICE'], productType: ProductType.SALE_ITEM },
+        { sku: 'FR03', name: 'ข้าวผัด จานเล็ก', unit: 'จาน', salePrice: 79000, costPrice: 25000, reorderPoint: 0, minQty: 0, categoryId: cat['FOOD_RICE'], productType: ProductType.SALE_ITEM },
+        { sku: 'FR04', name: 'ข้าวผัด จานใหญ่', unit: 'จาน', salePrice: 239000, costPrice: 60000, reorderPoint: 0, minQty: 0, categoryId: cat['FOOD_RICE'], productType: ProductType.SALE_ITEM },
+        { sku: 'FR05', name: 'ข้าวพนักงาน', unit: 'จาน', salePrice: 20000, costPrice: 8000, reorderPoint: 0, minQty: 0, categoryId: cat['FOOD_RICE'], productType: ProductType.SALE_ITEM },
 
         // ──── 🎤 KR: คาราโอเกะ ────────────────────────────────
-        { sku: 'KR01', name: 'Heineken (คาราโอเกะ)',           unit: 'ขวด',     salePrice: 40000,   costPrice: 28000,  reorderPoint: 12, minQty: 6,  categoryId: cat['KARAOKE'], productType: ProductType.SALE_ITEM },
+        { sku: 'KR01', name: 'Heineken (คาราโอเกะ)', unit: 'ขวด', salePrice: 40000, costPrice: 28000, reorderPoint: 12, minQty: 6, categoryId: cat['KARAOKE'], productType: ProductType.SALE_ITEM },
 
         // ══════════════════ วัตถุดิบ (RAW_MATERIAL) ══════════════════
 
         // ──── 🥩 RM: เนื้อสัตว์/ไก่ ──────────────────────────
-        { sku: 'RM01', name: 'ไก่ทั้งตัว',                     unit: 'กก.',     salePrice: 0,       costPrice: 0,      reorderPoint: 10, minQty: 5,  categoryId: cat['RAW_MEAT'], productType: ProductType.RAW_MATERIAL },
-        { sku: 'RM02', name: 'เนื้อวัวสด',                     unit: 'กก.',     salePrice: 0,       costPrice: 0,      reorderPoint: 5,  minQty: 2,  categoryId: cat['RAW_MEAT'], productType: ProductType.RAW_MATERIAL },
+        { sku: 'RM01', name: 'ไก่ทั้งตัว', unit: 'กก.', salePrice: 0, costPrice: 0, reorderPoint: 10, minQty: 5, categoryId: cat['RAW_MEAT'], productType: ProductType.RAW_MATERIAL },
+        { sku: 'RM02', name: 'เนื้อวัวสด', unit: 'กก.', salePrice: 0, costPrice: 0, reorderPoint: 5, minQty: 2, categoryId: cat['RAW_MEAT'], productType: ProductType.RAW_MATERIAL },
 
         // ──── 🐷 RP: เนื้อหมู ─────────────────────────────────
-        { sku: 'RP01', name: 'หมูสามชั้น',                     unit: 'กก.',     salePrice: 0,       costPrice: 0,      reorderPoint: 5,  minQty: 2,  categoryId: cat['RAW_PORK'], productType: ProductType.RAW_MATERIAL },
+        { sku: 'RP01', name: 'หมูสามชั้น', unit: 'กก.', salePrice: 0, costPrice: 0, reorderPoint: 5, minQty: 2, categoryId: cat['RAW_PORK'], productType: ProductType.RAW_MATERIAL },
 
         // ──── 🦑 RS: อาหารทะเลดิบ ─────────────────────────────
-        { sku: 'RS01', name: 'กุ้งสด',                         unit: 'กก.',     salePrice: 0,       costPrice: 0,      reorderPoint: 3,  minQty: 1,  categoryId: cat['RAW_SEA'], productType: ProductType.RAW_MATERIAL },
-        { sku: 'RS02', name: 'ปลาหมึกสด',                     unit: 'กก.',     salePrice: 0,       costPrice: 0,      reorderPoint: 3,  minQty: 1,  categoryId: cat['RAW_SEA'], productType: ProductType.RAW_MATERIAL },
+        { sku: 'RS01', name: 'กุ้งสด', unit: 'กก.', salePrice: 0, costPrice: 0, reorderPoint: 3, minQty: 1, categoryId: cat['RAW_SEA'], productType: ProductType.RAW_MATERIAL },
+        { sku: 'RS02', name: 'ปลาหมึกสด', unit: 'กก.', salePrice: 0, costPrice: 0, reorderPoint: 3, minQty: 1, categoryId: cat['RAW_SEA'], productType: ProductType.RAW_MATERIAL },
 
         // ──── 🥬 RV: ผัก/วัตถุดิบสด ──────────────────────────
-        { sku: 'RV01', name: 'มันฝรั่ง',                       unit: 'กก.',     salePrice: 0,       costPrice: 0,      reorderPoint: 5,  minQty: 2,  categoryId: cat['RAW_VEG'], productType: ProductType.RAW_MATERIAL },
-        { sku: 'RV02', name: 'หัวหอมใหญ่',                     unit: 'กก.',     salePrice: 0,       costPrice: 0,      reorderPoint: 5,  minQty: 2,  categoryId: cat['RAW_VEG'], productType: ProductType.RAW_MATERIAL },
-        { sku: 'RV03', name: 'กระเทียม',                       unit: 'กก.',     salePrice: 0,       costPrice: 0,      reorderPoint: 3,  minQty: 1,  categoryId: cat['RAW_VEG'], productType: ProductType.RAW_MATERIAL },
+        { sku: 'RV01', name: 'มันฝรั่ง', unit: 'กก.', salePrice: 0, costPrice: 0, reorderPoint: 5, minQty: 2, categoryId: cat['RAW_VEG'], productType: ProductType.RAW_MATERIAL },
+        { sku: 'RV02', name: 'หัวหอมใหญ่', unit: 'กก.', salePrice: 0, costPrice: 0, reorderPoint: 5, minQty: 2, categoryId: cat['RAW_VEG'], productType: ProductType.RAW_MATERIAL },
+        { sku: 'RV03', name: 'กระเทียม', unit: 'กก.', salePrice: 0, costPrice: 0, reorderPoint: 3, minQty: 1, categoryId: cat['RAW_VEG'], productType: ProductType.RAW_MATERIAL },
 
         // ──── 🧂 DG: เครื่องปรุง/ของแห้ง ─────────────────────
-        { sku: 'DG01', name: 'ข้าวสาร',                        unit: 'กก.',     salePrice: 0,       costPrice: 0,      reorderPoint: 20, minQty: 10, categoryId: cat['DRY_GOODS'], productType: ProductType.RAW_MATERIAL },
-        { sku: 'DG02', name: 'ข้าวเหนียว',                     unit: 'กก.',     salePrice: 0,       costPrice: 0,      reorderPoint: 10, minQty: 5,  categoryId: cat['DRY_GOODS'], productType: ProductType.RAW_MATERIAL },
-        { sku: 'DG03', name: 'น้ำมันพืช',                      unit: 'ลิตร',   salePrice: 0,       costPrice: 0,      reorderPoint: 5,  minQty: 2,  categoryId: cat['DRY_GOODS'], productType: ProductType.RAW_MATERIAL },
-        { sku: 'DG04', name: 'ซีอิ๊วขาว',                      unit: 'ขวด',     salePrice: 0,       costPrice: 0,      reorderPoint: 3,  minQty: 1,  categoryId: cat['DRY_GOODS'], productType: ProductType.RAW_MATERIAL },
+        { sku: 'DG01', name: 'ข้าวสาร', unit: 'กก.', salePrice: 0, costPrice: 0, reorderPoint: 20, minQty: 10, categoryId: cat['DRY_GOODS'], productType: ProductType.RAW_MATERIAL },
+        { sku: 'DG02', name: 'ข้าวเหนียว', unit: 'กก.', salePrice: 0, costPrice: 0, reorderPoint: 10, minQty: 5, categoryId: cat['DRY_GOODS'], productType: ProductType.RAW_MATERIAL },
+        { sku: 'DG03', name: 'น้ำมันพืช', unit: 'ลิตร', salePrice: 0, costPrice: 0, reorderPoint: 5, minQty: 2, categoryId: cat['DRY_GOODS'], productType: ProductType.RAW_MATERIAL },
+        { sku: 'DG04', name: 'ซีอิ๊วขาว', unit: 'ขวด', salePrice: 0, costPrice: 0, reorderPoint: 3, minQty: 1, categoryId: cat['DRY_GOODS'], productType: ProductType.RAW_MATERIAL },
     ]
 
     let productCount = 0
